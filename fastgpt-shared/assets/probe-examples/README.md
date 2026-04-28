@@ -497,7 +497,7 @@ YOUR_WORKFLOW_TOOL_APP_ID
 ```text
 workflowStart
   ↓
-buildReviewContext
+buildToolInput
   ↓
 callSupportWft(pluginModule + pluginId)
   ↓
@@ -507,18 +507,18 @@ answerNode
 输入映射：
 
 ```text
-callSupportWft.reviewContext
-  ← buildReviewContext.reviewContext
+callSupportWft.toolInput
+  ← buildToolInput.toolInput
 ```
 
 输出字段：
 
 ```text
-supportReviewResult
+toolResult
 supportResult
 supportPacket
 artifactIndex
-supportLayerContext
+toolContext
 ```
 
 注意：
@@ -766,7 +766,7 @@ pluginOutput
 `pluginInput` 定义对外输入：
 
 ```text
-reviewContext
+toolInput
 documentType
 enabledModules
 targetFileUrls
@@ -776,10 +776,10 @@ targetFileUrls
 `pluginOutput` 定义对外输出：
 
 ```text
-supportReviewResult
+toolResult
 supportPacket
 artifactIndex
-supportLayerContext
+toolContext
 ...
 ```
 

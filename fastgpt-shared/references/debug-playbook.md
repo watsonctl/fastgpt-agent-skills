@@ -18,7 +18,7 @@ This reference preserves the detailed FastGPT debugging guidance that used to li
 
 ## Business Delivery Harness（跨 Agent 验收）
 
-调试完成前必须先过业务交付门槛，而不是只确认节点跑通。该 harness **不绑定特定垂直 QA**，适用于问答、文件/方案审查、方案生成，以及其他 RAG / 工具编排 / 引用追溯型 FastGPT Agent。
+调试完成前必须先过业务交付门槛，而不是只确认节点跑通。该 harness **不绑定特定垂直 QA**，适用于问答、document review、proposal generation，以及其他 RAG / 工具编排 / 引用追溯型 FastGPT Agent。
 
 固定检查项：
 - `task_completed`：是否真的完成业务任务，而不是只跑完 workflow。
@@ -32,8 +32,8 @@ This reference preserves the detailed FastGPT debugging guidance that used to li
 
 Agent 映射：
 - QA Agent：回答要正面、有依据、有边界；结构化引用优先，关键结论自然带 cite。
-- 文件/方案审查 Agent：输出风险点、严重度、原文定位、依据和可执行整改建议。
-- 方案生成 Agent：输出可用方案正文，满足约束，说明假设、依据和不确定边界。
+- document review Agent：输出风险点、严重度、原文定位、依据和可执行整改建议。
+- proposal generation Agent：输出可用方案正文，满足约束，说明假设、依据和不确定边界。
 
 反过拟合规则：如果一条修复只能解释某个题、某次评测或某个客户语料，先写入项目上下文，不得升级为 shared 默认策略。共享规则只允许基于结构性信号：显式约束、证据强弱、来源优先级、引用完整性、流程收口和用户体验。
 

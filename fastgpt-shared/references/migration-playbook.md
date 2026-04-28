@@ -50,8 +50,8 @@ FastGPT 迁移不是复刻某个 workflow 形状，而是迁移业务能力。�
 
 交付物映射：
 - QA Agent：答案、依据、证据边界、引用或结构化来源。
-- 文件/方案审查 Agent：问题清单、风险等级、原文定位、依据、整改建议。
-- 方案生成 Agent：方案正文、约束满足情况、依据说明、假设与边界。
+- document review Agent：问题清单、风险等级、原文定位、依据、整改建议。
+- proposal generation Agent：方案正文、约束满足情况、依据说明、假设与边界。
 
 迁移验收门槛：
 - `task_completed`：交付物能解决用户业务问题。
@@ -209,4 +209,4 @@ For engineering standards, policy/audit, document-review, proposal-generation, o
 6. Native citations: if final answer cites workflow-tool-internal evidence, main workflow must still register top-level datasetSearch quoteList coverage before final answer and final text must include `[id](CITE)` markers.
 7. Output hygiene: no internal analyzer/verifier/ranking JSON should stream to users; final prompts should not expose tool calls, scoring, requery, fallback machinery, or XML follow-up blocks.
 
-This pattern is not limited to QA bots. Apply the same split to file/方案审查 agents and 方案生成 agents: FAQ/knowledge shortcuts can be supplemental, but source-grounded corpus evidence and final citation/traceability remain the trust boundary.
+This pattern is not limited to QA bots. Apply the same split to file/document review agents and proposal generation agents: FAQ/knowledge shortcuts can be supplemental, but source-grounded corpus evidence and final citation/traceability remain the trust boundary.
