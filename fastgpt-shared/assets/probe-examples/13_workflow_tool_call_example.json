@@ -1,0 +1,383 @@
+{
+  "nodes": [
+    {
+      "nodeId": "userGuide",
+      "name": "系统配置",
+      "intro": "工具工作流调用探针：验证主工作流通过 pluginModule 调用工具工作流。",
+      "avatar": "core/workflow/template/systemConfig",
+      "flowNodeType": "userGuide",
+      "showStatus": false,
+      "position": {
+        "x": -720,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "nodeId": "workflowStart",
+      "name": "流程开始",
+      "intro": "接收用户问题和上传文件。",
+      "avatar": "core/workflow/template/workflowStart",
+      "flowNodeType": "workflowStart",
+      "showStatus": false,
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "userChatInput",
+          "renderTypeList": [
+            "reference",
+            "textarea"
+          ],
+          "valueType": "string",
+          "label": "用户问题",
+          "required": true,
+          "toolDescription": "用户问题",
+          "debugLabel": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "userChatInput",
+          "key": "userChatInput",
+          "label": "用户问题",
+          "type": "static",
+          "valueType": "string",
+          "description": ""
+        },
+        {
+          "id": "userFiles",
+          "key": "userFiles",
+          "label": "用户文件",
+          "description": "用户上传文件 URL 数组。",
+          "type": "static",
+          "valueType": "arrayString"
+        }
+      ]
+    },
+    {
+      "nodeId": "buildReviewContext",
+      "name": "构造工具输入 reviewContext",
+      "intro": "构造用于调用证据材料整理工具工作流的最小 reviewContext。",
+      "avatar": "core/workflow/template/codeRun",
+      "flowNodeType": "code",
+      "showStatus": true,
+      "position": {
+        "x": 420,
+        "y": 0
+      },
+      "version": "482",
+      "inputs": [
+        {
+          "key": "system_addInputParam",
+          "renderTypeList": [
+            "addInputParam"
+          ],
+          "valueType": "dynamic",
+          "label": "",
+          "required": false,
+          "description": "代码节点输入参数。",
+          "customInputConfig": {
+            "selectValueTypeList": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "arrayString",
+              "arrayNumber",
+              "arrayBoolean",
+              "arrayObject",
+              "arrayAny",
+              "any",
+              "chatHistory",
+              "datasetQuote",
+              "dynamic",
+              "selectApp",
+              "selectDataset"
+            ],
+            "showDescription": false,
+            "showDefaultValue": true
+          },
+          "debugLabel": "",
+          "toolDescription": ""
+        },
+        {
+          "key": "codeType",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "label": "",
+          "value": "js",
+          "debugLabel": "",
+          "toolDescription": ""
+        },
+        {
+          "key": "code",
+          "renderTypeList": [
+            "custom"
+          ],
+          "label": "",
+          "value": "function main({ userChatInput, userFiles }) {\n  const reviewId = 'workflow-tool-call-probe-' + Date.now();\n  const targetFileUrls = Array.isArray(userFiles) ? userFiles.filter(Boolean) : [];\n  const candidateTitle = String(userChatInput || '').trim() || '工具工作流调用测试问题';\n\n  const reviewContext = {\n    reviewId,\n    documentType: 'construction_scheme',\n    documentTypeLabel: '施工方案',\n    query: candidateTitle,\n    targetFileUrls,\n    governedDatasetScope: {\n      profileId: 'probe.workflow_tool_call',\n      basisPackIds: [],\n      rulePackIds: []\n    },\n    evidenceRefIndex: {\n      'E-001': '用户输入 / 工具调用探针',\n      'F-001': targetFileUrls[0] || '未上传文件'\n    },\n    candidates: [\n      {\n        candidateId: 'support_material-candidate-001',\n        title: candidateTitle,\n        severityHint: 'medium',\n        moduleName: 'support_material',\n        summary: '这是主工作流调用工具工作流的最小 schema 探针，用于验证 pluginModule + pluginId + pluginInput/pluginOutput 映射。',\n        suggestion: '如本节点可正常返回 supportReviewResult，说明工具工作流调用链路有效。',\n        evidenceRefs: ['E-001'],\n        sourceRefs: ['F-001'],\n        evidenceStatus: targetFileUrls.length ? 'grounded' : 'visibility_gap',\n        manualReviewNeeded: !targetFileUrls.length,\n        findingType: 'schema_probe',\n        reportVisibility: 'formal',\n        ruleHits: [\n          {\n            ruleId: 'workflow_tool_call_schema_probe',\n            rationale: '主工作流已通过 pluginModule 调用证据材料整理工具工作流。'\n          }\n        ]\n      }\n    ]\n  };\n\n  return {\n    reviewContext,\n    reviewContextJson: JSON.stringify(reviewContext, null, 2)\n  };\n}",
+          "debugLabel": "",
+          "toolDescription": ""
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "string",
+          "canEdit": true,
+          "key": "userChatInput",
+          "label": "userChatInput",
+          "description": "",
+          "required": true,
+          "value": [
+            "workflowStart",
+            "userChatInput"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "userChatInput"
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "arrayString",
+          "canEdit": true,
+          "key": "userFiles",
+          "label": "userFiles",
+          "description": "",
+          "required": false,
+          "value": [
+            "workflowStart",
+            "userFiles"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "userFiles"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "system_rawResponse",
+          "key": "system_rawResponse",
+          "label": "完整结果",
+          "valueType": "object",
+          "type": "static",
+          "description": ""
+        },
+        {
+          "id": "error",
+          "key": "error",
+          "label": "错误信息",
+          "description": "代码运行错误信息。",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "system_addOutputParam",
+          "key": "system_addOutputParam",
+          "type": "dynamic",
+          "valueType": "dynamic",
+          "label": "",
+          "customFieldConfig": {
+            "selectValueTypeList": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "arrayString",
+              "arrayNumber",
+              "arrayBoolean",
+              "arrayObject",
+              "any",
+              "chatHistory",
+              "datasetQuote",
+              "dynamic",
+              "selectApp",
+              "selectDataset"
+            ],
+            "showDescription": false,
+            "showDefaultValue": false
+          },
+          "description": "return 对象会按 key 作为输出。"
+        },
+        {
+          "id": "reviewContext",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "reviewContext",
+          "label": "reviewContext",
+          "description": ""
+        },
+        {
+          "id": "reviewContextJson",
+          "valueType": "string",
+          "type": "dynamic",
+          "key": "reviewContextJson",
+          "label": "reviewContextJson",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "nodeId": "callSupportWft",
+      "name": "调用证据材料整理工具",
+      "intro": "通过 pluginModule 调用真实工具工作流。pluginId 指向当前实例中的“证据材料整理”工具工作流。",
+      "avatar": "/imgs/workflow/tool.svg",
+      "flowNodeType": "pluginModule",
+      "showStatus": false,
+      "position": {
+        "x": 900,
+        "y": 0
+      },
+      "version": "",
+      "inputs": [
+        {
+          "key": "system_forbid_stream",
+          "renderTypeList": [
+            "switch"
+          ],
+          "valueType": "boolean",
+          "label": "禁用流输出",
+          "description": "嵌套工具一律使用非流式。",
+          "value": true,
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": ""
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "object",
+          "canEdit": true,
+          "key": "reviewContext",
+          "label": "reviewContext",
+          "description": "",
+          "required": true,
+          "value": [
+            "buildReviewContext",
+            "reviewContext"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "reviewContext"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "supportReviewResult",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "supportReviewResult",
+          "label": "证据材料整理结果",
+          "description": ""
+        },
+        {
+          "id": "supportResult008",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "supportResult008",
+          "label": "证据线索摘要",
+          "description": ""
+        },
+        {
+          "id": "supportPacket008",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "supportPacket008",
+          "label": "证据意见包",
+          "description": ""
+        },
+        {
+          "id": "artifactIndex",
+          "valueType": "arrayObject",
+          "type": "dynamic",
+          "key": "artifactIndex",
+          "label": "材料索引",
+          "description": ""
+        },
+        {
+          "id": "supportLayerContext",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "supportLayerContext",
+          "label": "证据材料上下文",
+          "description": ""
+        }
+      ],
+      "pluginId": "YOUR_WORKFLOW_TOOL_APP_ID"
+    },
+    {
+      "nodeId": "answerNode",
+      "name": "输出工具调用结果",
+      "intro": "输出工具工作流调用结果。",
+      "avatar": "core/workflow/template/reply",
+      "flowNodeType": "answerNode",
+      "showStatus": false,
+      "position": {
+        "x": 1380,
+        "y": 0
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "text",
+          "renderTypeList": [
+            "textarea",
+            "reference"
+          ],
+          "valueType": "any",
+          "required": true,
+          "label": "回复内容",
+          "description": "输出给用户的文本。",
+          "placeholder": "",
+          "selectedTypeIndex": 0,
+          "value": "## 工具工作流调用结果\\n\\n### supportReviewResult\\n{{$callSupportWft.supportReviewResult$}}\\n\\n### supportPacket008\\n{{$callSupportWft.supportPacket008$}}\\n\\n### supportLayerContext\\n{{$callSupportWft.supportLayerContext$}}\\n\\n---\\n\\n### 输入 reviewContext\\n{{$buildReviewContext.reviewContextJson$}}",
+          "debugLabel": "",
+          "toolDescription": ""
+        }
+      ],
+      "outputs": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "workflowStart",
+      "target": "buildReviewContext",
+      "sourceHandle": "workflowStart-source-right",
+      "targetHandle": "buildReviewContext-target-left"
+    },
+    {
+      "source": "buildReviewContext",
+      "target": "callSupportWft",
+      "sourceHandle": "buildReviewContext-source-right",
+      "targetHandle": "callSupportWft-target-left"
+    },
+    {
+      "source": "callSupportWft",
+      "target": "answerNode",
+      "sourceHandle": "callSupportWft-source-right",
+      "targetHandle": "answerNode-target-left"
+    }
+  ],
+  "chatConfig": {
+    "welcomeText": "这是工具工作流调用探针。输入任意文本后，主工作流会构造 reviewContext，并通过 pluginModule 调用“证据材料整理”工具工作流。",
+    "variables": [],
+    "scheduledTriggerConfig": {
+      "cronString": "",
+      "timezone": "Asia/Shanghai",
+      "defaultPrompt": ""
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastGPT Shared Base"
+  short_description: "Shared FastGPT contracts, diagnostics, patterns, and install guidance"
+  default_prompt: "Use $fastgpt-shared to load the FastGPT shared contracts, diagnostics, harness, and pack install/sync guidance before deeper debug or migration work."

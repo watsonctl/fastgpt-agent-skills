@@ -1,0 +1,342 @@
+{
+  "nodes": [
+    {
+      "nodeId": "userGuide",
+      "name": "common:core.module.template.system_config",
+      "intro": "common:core.module.template.system_config_info",
+      "avatar": "core/workflow/template/systemConfig",
+      "flowNodeType": "userGuide",
+      "position": {
+        "x": 262.2732338817093,
+        "y": -476.00241136598146
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "welcomeText",
+          "label": "core.app.Welcome Text",
+          "valueType": "string",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": ""
+        },
+        {
+          "key": "variables",
+          "label": "core.app.Chat Variable",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": []
+        },
+        {
+          "key": "questionGuide",
+          "label": "core.app.Question Guide",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "open": false
+          }
+        },
+        {
+          "key": "tts",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "type": "web"
+          }
+        },
+        {
+          "key": "whisper",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "open": false,
+            "autoSend": false,
+            "autoTTSResponse": false
+          }
+        },
+        {
+          "key": "scheduleTrigger",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": null
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "nodeId": "workflowStartNodeId",
+      "name": "common:core.module.template.work_start",
+      "intro": "",
+      "avatar": "core/workflow/template/workflowStart",
+      "flowNodeType": "workflowStart",
+      "position": {
+        "x": 620,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "userChatInput",
+          "label": "workflow:user_question",
+          "valueType": "string",
+          "required": true,
+          "renderTypeList": [
+            "reference",
+            "textarea"
+          ],
+          "toolDescription": "用户问题",
+          "debugLabel": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "userChatInput",
+          "key": "userChatInput",
+          "type": "static",
+          "valueType": "string",
+          "label": "common:core.module.input.label.user question",
+          "description": ""
+        },
+        {
+          "id": "userFiles",
+          "key": "userFiles",
+          "label": "用户文件",
+          "type": "static",
+          "valueType": "arrayString",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "nodeId": "prepareContextNode",
+      "name": "构造 review_context",
+      "intro": "执行一段脚本代码，通常用于数据处理、格式转换、逻辑计算。",
+      "avatar": "/imgs/workflow/code.svg",
+      "flowNodeType": "code",
+      "showStatus": true,
+      "position": {
+        "x": 1030,
+        "y": -260
+      },
+      "version": "482",
+      "inputs": [
+        {
+          "key": "system_addInputParam",
+          "renderTypeList": [
+            "addInputParam"
+          ],
+          "valueType": "dynamic",
+          "label": "",
+          "required": false,
+          "description": "这些变量会作为代码的运行的输入参数",
+          "editField": {
+            "key": true,
+            "valueType": true
+          }
+        },
+        {
+          "key": "question",
+          "valueType": "string",
+          "label": "question",
+          "renderTypeList": [
+            "reference"
+          ],
+          "description": "用户问题",
+          "canEdit": true,
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "value": [
+            "workflowStartNodeId",
+            "userChatInput"
+          ]
+        },
+        {
+          "key": "codeType",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "label": "",
+          "value": "js"
+        },
+        {
+          "key": "code",
+          "renderTypeList": [
+            "custom"
+          ],
+          "label": "",
+          "value": "function main({ question }) {\n  const obj = {\n    task_type: 'schema_probe',\n    document_type: 'unknown',\n    strict_mode: true,\n    user_input: question || '',\n    generated_at: new Date().toISOString()\n  };\n  return { review_context: JSON.stringify(obj), ok: true };\n}"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "system_addOutputParam",
+          "key": "system_addOutputParam",
+          "type": "dynamic",
+          "valueType": "dynamic",
+          "label": "",
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "description": "将代码中 return 的对象作为输出，传递给后续的节点"
+        },
+        {
+          "id": "system_rawResponse",
+          "key": "system_rawResponse",
+          "label": "完整响应数据",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "error",
+          "key": "error",
+          "label": "运行错误",
+          "description": "代码运行错误信息，成功时返回空",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "review_context",
+          "type": "dynamic",
+          "key": "review_context",
+          "valueType": "string",
+          "label": "review_context"
+        },
+        {
+          "id": "ok",
+          "type": "dynamic",
+          "key": "ok",
+          "valueType": "boolean",
+          "label": "ok"
+        }
+      ]
+    },
+    {
+      "nodeId": "variableUpdateNode",
+      "name": "变量更新",
+      "intro": "可以更新指定节点的输出值或更新全局变量",
+      "avatar": "core/workflow/template/variableUpdate",
+      "flowNodeType": "variableUpdate",
+      "showStatus": false,
+      "position": {
+        "x": 1450,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "updateList",
+          "valueType": "any",
+          "label": "",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": [
+            {
+              "variable": [
+                "VARIABLE_NODE_ID",
+                "review_context"
+              ],
+              "value": [
+                "prepareContextNode",
+                "review_context"
+              ],
+              "valueType": "string",
+              "renderType": "reference"
+            }
+          ]
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "nodeId": "answerNode",
+      "name": "指定回复",
+      "intro": "该模块可以直接回复一段指定的内容。常用于引导、提示。非字符串内容传入时，会转成字符串进行输出。",
+      "avatar": "core/workflow/template/reply",
+      "flowNodeType": "answerNode",
+      "position": {
+        "x": 1870,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "text",
+          "renderTypeList": [
+            "textarea",
+            "reference"
+          ],
+          "valueType": "any",
+          "required": true,
+          "label": "core.module.input.label.Response content",
+          "description": "core.module.input.description.Response content",
+          "placeholder": "core.module.input.description.Response content",
+          "value": "变量更新结果：\n{{$VARIABLE_NODE_ID.review_context$}}\n\nCode 原始结果：\n{{$prepareContextNode.system_rawResponse$}}",
+          "debugLabel": "",
+          "toolDescription": ""
+        }
+      ],
+      "outputs": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "workflowStartNodeId",
+      "target": "prepareContextNode",
+      "sourceHandle": "workflowStartNodeId-source-right",
+      "targetHandle": "prepareContextNode-target-left"
+    },
+    {
+      "source": "prepareContextNode",
+      "target": "variableUpdateNode",
+      "sourceHandle": "prepareContextNode-source-right",
+      "targetHandle": "variableUpdateNode-target-left"
+    },
+    {
+      "source": "variableUpdateNode",
+      "target": "answerNode",
+      "sourceHandle": "variableUpdateNode-source-right",
+      "targetHandle": "answerNode-target-left"
+    }
+  ],
+  "chatConfig": {
+    "variables": [
+      {
+        "id": "review_context",
+        "key": "review_context",
+        "label": "review_context",
+        "type": "custom",
+        "required": false,
+        "maxLen": 2000,
+        "enums": [
+          {
+            "value": ""
+          }
+        ],
+        "icon": "core/app/variable/input"
+      }
+    ],
+    "scheduledTriggerConfig": {
+      "cronString": "",
+      "timezone": "Asia/Shanghai",
+      "defaultPrompt": ""
+    }
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastGPT Workflow Debug"
+  short_description: "Debug FastGPT import, runtime, citation, and workflow-tool failures"
+  default_prompt: "Use $fastgpt-workflow-debug to isolate the real blocker in this FastGPT workflow, starting from shared contracts and flowResponses evidence instead of guesswork."

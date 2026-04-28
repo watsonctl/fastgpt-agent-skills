@@ -1,0 +1,262 @@
+{
+  "nodes": [
+    {
+      "nodeId": "userGuide",
+      "name": "common:core.module.template.system_config",
+      "intro": "common:core.module.template.system_config_info",
+      "avatar": "core/workflow/template/systemConfig",
+      "flowNodeType": "userGuide",
+      "position": {
+        "x": 262.2732338817093,
+        "y": -476.00241136598146
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "welcomeText",
+          "label": "core.app.Welcome Text",
+          "valueType": "string",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": ""
+        },
+        {
+          "key": "variables",
+          "label": "core.app.Chat Variable",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": []
+        },
+        {
+          "key": "questionGuide",
+          "label": "core.app.Question Guide",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "open": false
+          }
+        },
+        {
+          "key": "tts",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "type": "web"
+          }
+        },
+        {
+          "key": "whisper",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": {
+            "open": false,
+            "autoSend": false,
+            "autoTTSResponse": false
+          }
+        },
+        {
+          "key": "scheduleTrigger",
+          "label": "",
+          "valueType": "any",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "value": null
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "nodeId": "workflowStartNodeId",
+      "name": "common:core.module.template.work_start",
+      "intro": "",
+      "avatar": "core/workflow/template/workflowStart",
+      "flowNodeType": "workflowStart",
+      "position": {
+        "x": 620,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "userChatInput",
+          "label": "workflow:user_question",
+          "valueType": "string",
+          "required": true,
+          "renderTypeList": [
+            "reference",
+            "textarea"
+          ],
+          "toolDescription": "用户问题",
+          "debugLabel": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "userChatInput",
+          "key": "userChatInput",
+          "type": "static",
+          "valueType": "string",
+          "label": "common:core.module.input.label.user question",
+          "description": ""
+        },
+        {
+          "id": "userFiles",
+          "key": "userFiles",
+          "label": "用户文件",
+          "type": "static",
+          "valueType": "arrayString",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "nodeId": "textTemplateNode",
+      "name": "文本加工",
+      "intro": "可对固定或传入的文本进行加工后输出，非字符串类型数据最终会转成字符串类型。",
+      "avatar": "/imgs/workflow/textEditor.svg",
+      "flowNodeType": "pluginModule",
+      "showStatus": false,
+      "position": {
+        "x": 1030,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "system_addInputParam",
+          "valueType": "dynamic",
+          "label": "动态外部数据",
+          "renderTypeList": [
+            "addInputParam"
+          ],
+          "required": false,
+          "description": "",
+          "canEdit": false,
+          "value": "",
+          "editField": {
+            "key": true
+          },
+          "dynamicParamDefaultValue": {
+            "inputType": "reference",
+            "valueType": "string",
+            "required": true
+          }
+        },
+        {
+          "key": "question",
+          "valueType": "string",
+          "label": "question",
+          "renderTypeList": [
+            "reference"
+          ],
+          "required": true,
+          "description": "",
+          "canEdit": true,
+          "editField": {
+            "key": true
+          },
+          "value": [
+            "workflowStartNodeId",
+            "userChatInput"
+          ]
+        },
+        {
+          "key": "文本",
+          "valueType": "string",
+          "label": "文本",
+          "renderTypeList": [
+            "textarea"
+          ],
+          "required": true,
+          "description": "",
+          "canEdit": false,
+          "value": "# FastGPT 文本加工探针\n\n用户输入：{{question}}\n\n固定字段：schema_probe=text_template_concat\n\n请把该输出传给后续节点。",
+          "editField": {
+            "key": true
+          },
+          "maxLength": "",
+          "dynamicParamDefaultValue": {
+            "inputType": "reference",
+            "valueType": "string",
+            "required": true
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "id": "text",
+          "type": "static",
+          "key": "text",
+          "valueType": "string",
+          "label": "text",
+          "description": ""
+        }
+      ],
+      "pluginId": "community-textEditor"
+    },
+    {
+      "nodeId": "answerNode",
+      "name": "指定回复",
+      "intro": "该模块可以直接回复一段指定的内容。常用于引导、提示。非字符串内容传入时，会转成字符串进行输出。",
+      "avatar": "core/workflow/template/reply",
+      "flowNodeType": "answerNode",
+      "position": {
+        "x": 1450,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "text",
+          "renderTypeList": [
+            "textarea",
+            "reference"
+          ],
+          "valueType": "any",
+          "required": true,
+          "label": "core.module.input.label.Response content",
+          "description": "core.module.input.description.Response content",
+          "placeholder": "core.module.input.description.Response content",
+          "value": "文本加工输出：\n{{$textTemplateNode.text$}}",
+          "debugLabel": "",
+          "toolDescription": ""
+        }
+      ],
+      "outputs": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "workflowStartNodeId",
+      "target": "textTemplateNode",
+      "sourceHandle": "workflowStartNodeId-source-right",
+      "targetHandle": "textTemplateNode-target-left"
+    },
+    {
+      "source": "textTemplateNode",
+      "target": "answerNode",
+      "sourceHandle": "textTemplateNode-source-right",
+      "targetHandle": "answerNode-target-left"
+    }
+  ],
+  "chatConfig": {
+    "variables": [],
+    "scheduledTriggerConfig": {
+      "cronString": "",
+      "timezone": "Asia/Shanghai",
+      "defaultPrompt": ""
+    }
+  }
+}

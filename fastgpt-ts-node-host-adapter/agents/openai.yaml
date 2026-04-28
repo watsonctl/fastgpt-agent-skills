@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastGPT TS/Node Host Adapter"
+  short_description: "Approved TS/Node Helper/API exception path for FastGPT migrations"
+  default_prompt: "Use $fastgpt-ts-node-host-adapter only after workflow-only and workflow+workflow-tools are insufficient and a TS/Node Helper/API exception is explicitly approved."

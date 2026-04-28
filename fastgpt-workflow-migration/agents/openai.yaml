@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastGPT Workflow Migration"
+  short_description: "Migrate code and RAG flows into FastGPT workflow/workflow-tool bundles"
+  default_prompt: "Use $fastgpt-workflow-migration to convert this system into importable FastGPT workflow JSON, using the shared FastGPT pack and preserving the business deliverable."

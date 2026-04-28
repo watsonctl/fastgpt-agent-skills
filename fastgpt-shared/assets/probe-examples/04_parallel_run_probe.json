@@ -1,0 +1,518 @@
+{
+  "nodes": [
+    {
+      "nodeId": "userGuide",
+      "name": "系统配置",
+      "intro": "可以配置应用的系统参数",
+      "avatar": "core/workflow/template/systemConfig",
+      "flowNodeType": "userGuide",
+      "position": {
+        "x": 260,
+        "y": -460
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "welcomeText",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "valueType": "string",
+          "label": "core.app.Welcome Text",
+          "value": ""
+        },
+        {
+          "key": "variables",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "valueType": "any",
+          "label": "core.app.Chat Variable",
+          "value": []
+        },
+        {
+          "key": "questionGuide",
+          "valueType": "boolean",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "label": "core.app.Question Guide",
+          "value": false
+        },
+        {
+          "key": "tts",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "valueType": "any",
+          "label": "",
+          "value": {
+            "type": "web"
+          }
+        },
+        {
+          "key": "whisper",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "valueType": "any",
+          "label": "",
+          "value": {
+            "open": false,
+            "autoSend": false,
+            "autoTTSResponse": false
+          }
+        },
+        {
+          "key": "scheduleTrigger",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "valueType": "any",
+          "label": "",
+          "value": null
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "nodeId": "workflowStartNodeId",
+      "name": "流程开始",
+      "intro": "",
+      "avatar": "core/workflow/template/workflowStart",
+      "flowNodeType": "workflowStart",
+      "position": {
+        "x": 620,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "userChatInput",
+          "renderTypeList": [
+            "reference",
+            "textarea"
+          ],
+          "valueType": "string",
+          "label": "用户问题",
+          "required": true,
+          "toolDescription": "用户问题",
+          "debugLabel": ""
+        }
+      ],
+      "outputs": [
+        {
+          "id": "userChatInput",
+          "key": "userChatInput",
+          "label": "common:core.module.input.label.user question",
+          "type": "static",
+          "valueType": "string",
+          "description": ""
+        },
+        {
+          "id": "userFiles",
+          "key": "userFiles",
+          "label": "用户文件",
+          "type": "static",
+          "valueType": "arrayString",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "nodeId": "prepareArrayNode",
+      "name": "代码运行",
+      "intro": "执行一段脚本代码，通常用于数据处理、格式转换、逻辑计算。",
+      "avatar": "/imgs/workflow/code.svg",
+      "flowNodeType": "code",
+      "showStatus": true,
+      "position": {
+        "x": 1030,
+        "y": -260
+      },
+      "version": "482",
+      "inputs": [
+        {
+          "key": "system_addInputParam",
+          "renderTypeList": [
+            "addInputParam"
+          ],
+          "valueType": "dynamic",
+          "label": "",
+          "required": false,
+          "description": "这些变量会作为代码的运行的输入参数",
+          "editField": {
+            "key": true,
+            "valueType": true
+          }
+        },
+        {
+          "key": "ask",
+          "valueType": "string",
+          "label": "ask",
+          "renderTypeList": [
+            "reference"
+          ],
+          "description": "",
+          "canEdit": true,
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "value": [
+            "parallelRunNode",
+            "currentItem"
+          ]
+        },
+        {
+          "key": "codeType",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "label": "",
+          "value": "js"
+        },
+        {
+          "key": "code",
+          "renderTypeList": [
+            "custom"
+          ],
+          "label": "",
+          "value": "function main({ask}){\n  return { processed: `并行处理：${ask}` };\n}"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "system_addOutputParam",
+          "key": "system_addOutputParam",
+          "type": "dynamic",
+          "valueType": "dynamic",
+          "label": "",
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "description": "将代码中 return 的对象作为输出，传递给后续的节点"
+        },
+        {
+          "id": "system_rawResponse",
+          "key": "system_rawResponse",
+          "label": "完整响应数据",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "error",
+          "key": "error",
+          "label": "运行错误",
+          "description": "代码运行错误信息，成功时返回空",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "textArray",
+          "type": "dynamic",
+          "key": "textArray",
+          "valueType": "arrayString",
+          "label": "textArray"
+        }
+      ]
+    },
+    {
+      "nodeId": "parallelRunNode",
+      "name": "并行运行",
+      "intro": "对数组元素并发运行同一个子流程，并聚合成功/失败结果。此节点结构为探针版，需要当前实例导出样本校准。",
+      "avatar": "core/workflow/template/parallelRun",
+      "flowNodeType": "parallelRun",
+      "showStatus": true,
+      "position": {
+        "x": 1450,
+        "y": -260
+      },
+      "version": "4.14.11",
+      "inputs": [
+        {
+          "key": "array",
+          "renderTypeList": [
+            "reference"
+          ],
+          "valueType": "arrayString",
+          "label": "Array",
+          "required": true,
+          "value": [
+            "prepareArrayNode",
+            "textArray"
+          ],
+          "debugLabel": "",
+          "toolDescription": ""
+        },
+        {
+          "key": "maxConcurrency",
+          "renderTypeList": [
+            "numberInput"
+          ],
+          "valueType": "number",
+          "label": "Max concurrency",
+          "required": true,
+          "min": 1,
+          "max": 10,
+          "value": 5
+        },
+        {
+          "key": "maxRetries",
+          "renderTypeList": [
+            "numberInput"
+          ],
+          "valueType": "number",
+          "label": "Max retries per task",
+          "required": true,
+          "min": 0,
+          "max": 5,
+          "value": 3
+        }
+      ],
+      "outputs": [
+        {
+          "id": "successResults",
+          "key": "successResults",
+          "label": "Success Results",
+          "valueType": "arrayAny",
+          "type": "static"
+        },
+        {
+          "id": "failedResults",
+          "key": "failedResults",
+          "label": "Failed Results",
+          "valueType": "arrayAny",
+          "type": "static"
+        },
+        {
+          "id": "fullResults",
+          "key": "fullResults",
+          "label": "Full Results",
+          "valueType": "arrayAny",
+          "type": "static"
+        },
+        {
+          "id": "status",
+          "key": "status",
+          "label": "Status",
+          "valueType": "string",
+          "type": "static"
+        },
+        {
+          "id": "currentItem",
+          "key": "currentItem",
+          "label": "Current Item",
+          "valueType": "string",
+          "type": "static"
+        }
+      ],
+      "childrenNodeIdList": [
+        "parallelBodyCodeNode",
+        "parallelEndNode"
+      ]
+    },
+    {
+      "nodeId": "parallelBodyCodeNode",
+      "name": "并行体-加工当前项",
+      "intro": "执行一段脚本代码，通常用于数据处理、格式转换、逻辑计算。",
+      "avatar": "/imgs/workflow/code.svg",
+      "flowNodeType": "code",
+      "showStatus": true,
+      "position": {
+        "x": 1450,
+        "y": 120
+      },
+      "version": "482",
+      "inputs": [
+        {
+          "key": "system_addInputParam",
+          "renderTypeList": [
+            "addInputParam"
+          ],
+          "valueType": "dynamic",
+          "label": "",
+          "required": false,
+          "description": "这些变量会作为代码的运行的输入参数",
+          "editField": {
+            "key": true,
+            "valueType": true
+          }
+        },
+        {
+          "key": "ask",
+          "valueType": "string",
+          "label": "ask",
+          "renderTypeList": [
+            "reference"
+          ],
+          "description": "",
+          "canEdit": true,
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "value": [
+            "parallelRunNode",
+            "currentItem"
+          ]
+        },
+        {
+          "key": "codeType",
+          "renderTypeList": [
+            "hidden"
+          ],
+          "label": "",
+          "value": "js"
+        },
+        {
+          "key": "code",
+          "renderTypeList": [
+            "custom"
+          ],
+          "label": "",
+          "value": "function main({ask}){\n  return { processed: `并行处理：${ask}` };\n}"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "system_addOutputParam",
+          "key": "system_addOutputParam",
+          "type": "dynamic",
+          "valueType": "dynamic",
+          "label": "",
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "description": "将代码中 return 的对象作为输出，传递给后续的节点"
+        },
+        {
+          "id": "system_rawResponse",
+          "key": "system_rawResponse",
+          "label": "完整响应数据",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "error",
+          "key": "error",
+          "label": "运行错误",
+          "description": "代码运行错误信息，成功时返回空",
+          "valueType": "object",
+          "type": "static"
+        },
+        {
+          "id": "processed",
+          "type": "dynamic",
+          "key": "processed",
+          "valueType": "string",
+          "label": "processed"
+        }
+      ],
+      "parentNodeId": "parallelRunNode"
+    },
+    {
+      "nodeId": "parallelEndNode",
+      "name": "并行体结束",
+      "intro": "选择循环体输出变量，聚合为批量结果。此节点结构为探针版。",
+      "avatar": "core/workflow/template/loopEnd",
+      "flowNodeType": "loopEnd",
+      "showStatus": false,
+      "position": {
+        "x": 1850,
+        "y": 120
+      },
+      "version": "481",
+      "parentNodeId": "parallelRunNode",
+      "inputs": [
+        {
+          "key": "output",
+          "renderTypeList": [
+            "reference"
+          ],
+          "valueType": "string",
+          "label": "输出变量",
+          "required": true,
+          "value": [
+            "parallelBodyCodeNode",
+            "processed"
+          ]
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "nodeId": "answerNode",
+      "name": "指定回复",
+      "intro": "该模块可以直接回复一段指定的内容。常用于引导、提示。非字符串内容传入时，会转成字符串进行输出。",
+      "avatar": "core/workflow/template/reply",
+      "flowNodeType": "answerNode",
+      "position": {
+        "x": 1880,
+        "y": -260
+      },
+      "version": "481",
+      "inputs": [
+        {
+          "key": "text",
+          "renderTypeList": [
+            "textarea",
+            "reference"
+          ],
+          "valueType": "any",
+          "required": true,
+          "label": "core.module.input.label.Response content",
+          "description": "common:core.module.input.description.Response content",
+          "placeholder": "common:core.module.input.description.Response content",
+          "value": "Parallel 成功结果：\n{{$parallelRunNode.successResults$}}\n\n完整结果：\n{{$parallelRunNode.fullResults$}}",
+          "debugLabel": "",
+          "toolDescription": ""
+        }
+      ],
+      "outputs": []
+    }
+  ],
+  "edges": [
+    {
+      "source": "workflowStartNodeId",
+      "target": "prepareArrayNode",
+      "sourceHandle": "workflowStartNodeId-source-right",
+      "targetHandle": "prepareArrayNode-target-left"
+    },
+    {
+      "source": "prepareArrayNode",
+      "target": "parallelRunNode",
+      "sourceHandle": "prepareArrayNode-source-right",
+      "targetHandle": "parallelRunNode-target-left"
+    },
+    {
+      "source": "parallelRunNode",
+      "target": "parallelBodyCodeNode",
+      "sourceHandle": "parallelRunNode-source-bottom",
+      "targetHandle": "parallelBodyCodeNode-target-top"
+    },
+    {
+      "source": "parallelBodyCodeNode",
+      "target": "parallelEndNode",
+      "sourceHandle": "parallelBodyCodeNode-source-right",
+      "targetHandle": "parallelEndNode-target-left"
+    },
+    {
+      "source": "parallelRunNode",
+      "target": "answerNode",
+      "sourceHandle": "parallelRunNode-source-right",
+      "targetHandle": "answerNode-target-left"
+    }
+  ],
+  "chatConfig": {
+    "variables": [],
+    "questionGuide": false,
+    "scheduledTriggerConfig": {
+      "cronString": "",
+      "timezone": "Asia/Shanghai",
+      "defaultPrompt": ""
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "nodes": [
+    {
+      "nodeId": "userGuide",
+      "name": "系统配置",
+      "intro": "Scaffolded FastGPT workflow system config",
+      "avatar": "core/workflow/template/systemConfig",
+      "flowNodeType": "userGuide",
+      "position": {
+        "x": -220,
+        "y": -180
+      },
+      "version": "latest",
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "nodeId": "workflowStart",
+      "name": "工作流开始",
+      "intro": "Entry node for generated workflow scaffolds",
+      "avatar": "core/workflow/template/workflowStart",
+      "flowNodeType": "workflowStart",
+      "position": {
+        "x": 40,
+        "y": 0
+      },
+      "version": "latest",
+      "inputs": [],
+      "outputs": []
+    }
+  ],
+  "edges": [],
+  "chatConfig": {
+    "welcomeText": "__WELCOME_TEXT__",
+    "variables": [],
+    "autoExecute": false,
+    "questionGuide": {
+      "open": true,
+      "model": "gpt-5",
+      "customPrompt": "Generate concrete follow-up questions for this app."
+    },
+    "ttsConfig": {
+      "type": "web"
+    },
+    "whisperConfig": {
+      "open": false,
+      "autoSend": false,
+      "autoTTSResponse": false
+    },
+    "chatInputGuide": {
+      "open": true,
+      "customUrl": ""
+    },
+    "fileSelectConfig": {
+      "maxFiles": 10,
+      "canSelectFile": false,
+      "canSelectImg": false,
+      "canSelectVideo": false,
+      "canSelectAudio": false,
+      "canSelectCustomFileExtension": false,
+      "customFileExtensionList": []
+    },
+    "instruction": "__INSTRUCTION__"
+  }
+}

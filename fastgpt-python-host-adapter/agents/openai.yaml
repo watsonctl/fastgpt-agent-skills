@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastGPT Python Host Adapter"
+  short_description: "Approved Python Helper/API exception path for FastGPT migrations"
+  default_prompt: "Use $fastgpt-python-host-adapter only after workflow-only and workflow+workflow-tools are insufficient and a Python Helper/API exception is explicitly approved."
