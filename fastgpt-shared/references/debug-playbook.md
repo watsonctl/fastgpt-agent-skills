@@ -305,8 +305,8 @@ const extractFastGPTPlainText = (value) => collectFastGPTTextFragments(value)
    - 后果：回答看起来“有依据”，但主结论不准，甚至会把 supporting/reference 证据伪装成业务主依据。
    - 修复：在 evidence bundler 的排序层增加结构性信号，而不是题目特判：
      - `scenarioApplicabilityScore`：问题对象、动作、约束对象是否一致；
-     - `wrongScenarioPenalty`：是否只是共享关键词但属于不同工程对象/场景；
-     - `genericConstructionFit`：通用施工/验收问题优先通用施工/验收规范，而不是专门工程/专门材料/专门设备规范。
+     - `wrongScenarioPenalty`：是否只是共享关键词但属于不同业务对象/场景；
+     - `generalScenarioFit`：通用施工/验收问题优先通用施工/验收规范，而不是专门工程/专门材料/专门设备规范。
    - 验收：primary 必须服务业务交付，不得让相邻场景条文凭词面命中抢主证据；supporting 只能补充，不能反向覆盖 primary。
 
 7. **弱证据边界被说成确定结论**

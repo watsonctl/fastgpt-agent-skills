@@ -1,7 +1,7 @@
 # FastGPT 工作流 JSON Schema 探针包
 
 > 适用目的：用于在当前 FastGPT 实例中验证工作流 JSON 的 root schema、node schema、edge schema、variable schema、工具工作流调用方式和常用节点导入/运行行为。  
-> 使用边界：These files are schema probes and minimal examples, not production business workflows. A production workflow bundle should be generated only after the relevant probes pass in the target FastGPT instance.
+> 使用边界：These files are schema probes and minimal examples, not production workflows. A production workflow bundle should be generated only after the relevant probes pass in the target FastGPT instance.
 
 更新时间：2026-04-28
 
@@ -31,7 +31,7 @@
      - 业务节点，例如 `code`
      - `pluginOutput`
    - 主工作流调用工具工作流时，不使用旧式 `runApp`。
-   - 当前实例真实调用方式是：
+   - In the exported sample, the workflow-tool call uses：
      - `flowNodeType: "pluginModule"`
      - `avatar: "/imgs/workflow/tool.svg"`
      - `pluginId: "<真实工具工作流 ID>"`
@@ -214,13 +214,13 @@ flowNodeType: "tools"
 candidate item discovery
 辅助工具选择
 探索性补充分析
-非production business workflow辅助推理
+非production workflow辅助推理
 ```
 
 限制：
 
 - 不建议作为final business output主链。
-- 对production business workflow系统，Tool Calling / AgentV2 应作为辅助层，而不是最终判定层。
+- 对production workflow system，Tool Calling / AgentV2 应作为辅助层，而不是最终判定层。
 
 ---
 
@@ -478,19 +478,19 @@ avatar: "/imgs/workflow/tool.svg"
 pluginId: "YOUR_WORKFLOW_TOOL_APP_ID"
 ```
 
-当前默认调用的工具：
+Observed in tested FastGPT instances:
 
 ```text
-sample helper workflow tool
+example workflow tool
 ```
 
-当前默认 `pluginId`：
+Observed `pluginId`:
 
 ```text
 YOUR_WORKFLOW_TOOL_APP_ID
 ```
 
-该 `pluginId` 来自当前实例的production business workflow主流程中的“调用sample sample helper workflow”节点。
+Replace pluginId with the target workflow tool appId from your FastGPT instance.production workflow主流程中的“调用example workflow tool”节点。
 
 调用关系：
 
@@ -841,7 +841,7 @@ pluginId: "<目标工具工作流 ID>"
 
 ## 9. 总体结论
 
-当前探针包已经可以支撑production business workflow工作流 JSON 的第一轮生成，但应遵守以下原则：
+当前探针包已经可以支撑production workflow工作流 JSON 的第一轮生成，但应遵守以下原则：
 
 ```text
 1. 以当前实例导出的 JSON 为 System of Record

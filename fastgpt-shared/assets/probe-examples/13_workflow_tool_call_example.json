@@ -63,7 +63,7 @@
     {
       "nodeId": "buildToolInput",
       "name": "构造工具输入 toolInput",
-      "intro": "构造用于调用sample helper workflow tool的最小 toolInput。",
+      "intro": "构造用于调用example workflow tool的最小 toolInput。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -122,7 +122,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ userChatInput, userFiles }) {\n  const requestId = 'workflow-tool-call-probe-' + Date.now();\n  const targetFileUrls = Array.isArray(userFiles) ? userFiles.filter(Boolean) : [];\n  const candidateTitle = String(userChatInput || '').trim() || '工具工作流调用测试问题';\n\n  const toolInput = {\n    requestId,\n    taskType: 'generic_document',\n    taskTypeLabel: '通用文档',\n    query: candidateTitle,\n    targetFileUrls,\n    resourceScope: {\n      profileId: 'probe.workflow_tool_call',\n      resourceIds: [],\n      checkSetIds: []\n    },\n    inputRefIndex: {\n      'E-001': '用户输入 / 工具调用探针',\n      'F-001': targetFileUrls[0] || '未上传文件'\n    },\n    items: [\n      {\n        candidateId: 'sample_module-candidate-001',\n        title: candidateTitle,\n        priorityHint: 'medium',\n        moduleName: 'sample_module',\n        summary: '这是主工作流调用工具工作流的最小 schema 探针，用于验证 pluginModule + pluginId + pluginInput/pluginOutput 映射。',\n        suggestion: '如本节点可正常返回 toolResult，说明工具工作流调用链路有效。',\n        sourceRefs: ['E-001'],\n        sourceRefs: ['F-001'],\n        sourceStatus: targetFileUrls.length ? 'grounded' : 'visibility_gap',\n        humanReviewNeeded: !targetFileUrls.length,\n        itemType: 'schema_probe',\n        outputVisibility: 'final',\n        validationChecks: [\n          {\n            ruleId: 'workflow_tool_call_schema_probe',\n            rationale: '主工作流已通过 pluginModule 调用sample helper workflow tool。'\n          }\n        ]\n      }\n    ]\n  };\n\n  return {\n    toolInput,\n    toolInputJson: JSON.stringify(toolInput, null, 2)\n  };\n}",
+          "value": "function main({ userChatInput, userFiles }) {\n  const requestId = 'workflow-tool-call-probe-' + Date.now();\n  const targetFileUrls = Array.isArray(userFiles) ? userFiles.filter(Boolean) : [];\n  const candidateTitle = String(userChatInput || '').trim() || '工具工作流调用测试问题';\n\n  const toolInput = {\n    requestId,\n    taskType: 'generic_document',\n    taskTypeLabel: '通用文档',\n    query: candidateTitle,\n    targetFileUrls,\n    resourceScope: {\n      profileId: 'probe.workflow_tool_call',\n      resourceIds: [],\n      checkSetIds: []\n    },\n    inputRefIndex: {\n      'E-001': '用户输入 / 工具调用探针',\n      'F-001': targetFileUrls[0] || '未上传文件'\n    },\n    items: [\n      {\n        candidateId: 'sample_module-candidate-001',\n        title: candidateTitle,\n        priorityHint: 'medium',\n        moduleName: 'sample_module',\n        summary: '这是主工作流调用工具工作流的最小 schema 探针，用于验证 pluginModule + pluginId + pluginInput/pluginOutput 映射。',\n        suggestion: '如本节点可正常返回 toolResult，说明工具工作流调用链路有效。',\n        sourceRefs: ['E-001', 'F-001'],\n        sourceStatus: targetFileUrls.length ? 'grounded' : 'visibility_gap',\n        humanReviewNeeded: !targetFileUrls.length,\n        itemType: 'schema_probe',\n        outputVisibility: 'final',\n        validationChecks: [\n          {\n            ruleId: 'workflow_tool_call_schema_probe',\n            rationale: '主工作流已通过 pluginModule 调用example workflow tool。'\n          }\n        ]\n      }\n    ]\n  };\n\n  return {\n    toolInput,\n    toolInputJson: JSON.stringify(toolInput, null, 2)\n  };\n}",
           "debugLabel": "",
           "toolDescription": ""
         },
@@ -230,8 +230,8 @@
     },
     {
       "nodeId": "callWorkflowTool",
-      "name": "调用sample sample helper workflow工具",
-      "intro": "通过 pluginModule 调用真实工具工作流。pluginId 指向当前实例中的“sample sample helper workflow”工具工作流。",
+      "name": "调用example workflow tool工具",
+      "intro": "通过 pluginModule 调用真实工具工作流。pluginId is a placeholder pointing to the target workflow tool in your instance.",
       "avatar": "/imgs/workflow/tool.svg",
       "flowNodeType": "pluginModule",
       "showStatus": false,
@@ -280,7 +280,7 @@
           "valueType": "object",
           "type": "dynamic",
           "key": "toolResult",
-          "label": "sample sample helper workflow结果",
+          "label": "example workflow tool结果",
           "description": ""
         },
         {
@@ -372,7 +372,7 @@
     }
   ],
   "chatConfig": {
-    "welcomeText": "这是工具工作流调用探针。输入任意文本后，主工作流会构造 toolInput，并通过 pluginModule 调用“sample sample helper workflow”工具工作流。",
+    "welcomeText": "这是工具工作流调用探针。输入任意文本后，主工作流会构造 toolInput，并通过 pluginModule 调用“example workflow tool”工具工作流。",
     "variables": [],
     "scheduledTriggerConfig": {
       "cronString": "",

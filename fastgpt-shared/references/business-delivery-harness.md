@@ -74,7 +74,7 @@ Before acceptance testing, establish the exact credential identity without stori
 
 - Maintain a local, non-secret credential inventory with agent name, base URL, app purpose, owner, expected workflow entry nodes, and a short key fingerprint such as first 8 plus last 6 characters. Never store the full key in repo docs, reports, skill files, or logs.
 - If the user provides a key in chat, use it only for the current process. Do not copy it into files. After the run, update only the non-secret inventory fields if a persistent mapping is needed.
-- Run a cheap identity probe before business testing: call the app with `detail=true`, then compare `responseData` node IDs/module names with the expected workflow. A target business agent should show the review chain, not an unrelated `datasetSearchNode`.
+- Run a cheap identity probe before business testing: call the app with `detail=true`, then compare `responseData` node IDs/module names with the expected workflow. A target business agent should show the expected workflow chain, not an unrelated `datasetSearchNode`.
 - If the probe reaches a different app, stop and report `wrong_agent_key` with observed non-secret node evidence. Do not tune payloads, datasets, or prompts against the wrong app.
 
 Acceptance claims must name the credential identity source in non-secret terms, for example "target app key provided by user this session" or "local inventory entry: target-app / fingerprint abcd1234...xyz789".
