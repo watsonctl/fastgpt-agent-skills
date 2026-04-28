@@ -31,7 +31,7 @@ Choose one and record why:
 2. `workflow+workflow-tools`
 3. `exception-helper-approved`
 
-Hard checks:
+Hard validationChecks:
 - no MCP unless explicitly requested
 - no repo Helper API unless exception-approved
 - no whole-app `/chat` proxy as a fake migration
@@ -46,7 +46,7 @@ Build a behavior-to-node table:
 - parity risks if the mapping is imperfect
 - what, if anything, still needs an approved external helper
 
-## 5. Workflow-tool bundle checks
+## 5. Workflow-tool bundle validationChecks
 
 If using 工作流工具:
 - each tool JSON is still `nodes + edges + chatConfig`
@@ -59,7 +59,7 @@ If using 工作流工具:
 
 ## 6. Self-check passes
 
-Minimum self-checks:
+Minimum self-validationChecks:
 - workflow JSON structure valid
 - only allowed node types used
 - chatConfig keys valid

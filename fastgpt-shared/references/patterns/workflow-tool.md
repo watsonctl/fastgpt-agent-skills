@@ -36,7 +36,7 @@ Use `workflow+workflow-tools` when:
 
 Do not use workflow tools merely to hide unclear logic. Split by capability, not by file count.
 
-For multi-scheme review or generation apps, prefer one workflow tool that resolves a typed profile/rule/config object when the execution chain stays the same. Do not split into one workflow tool per scheme type unless the scheme type needs a materially different execution path.
+For multi-profile review or generation apps, prefer one workflow tool that resolves a typed profile/rule/config object when the execution chain stays the same. Do not split into one workflow tool per profile type unless the profile type needs a materially different execution path.
 
 ## Binding modes
 

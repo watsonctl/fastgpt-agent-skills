@@ -3,7 +3,7 @@
 Use this harness for any FastGPT agent where the user is buying the **business deliverable**, not the internal workflow shape.
 It applies across QA, file/plan review, proposal generation, and other RAG / tool-orchestration / traceability agents.
 
-## Core checks
+## Core validationChecks
 
 - `task_completed`: the final artifact actually answers, reviews, or generates what the user asked for.
 - `evidence_grounded`: key conclusions are supported by retrieved evidence; weak evidence is labeled as a boundary.

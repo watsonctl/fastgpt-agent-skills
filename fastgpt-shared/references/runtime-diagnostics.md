@@ -27,7 +27,7 @@ Run runtime diagnostics before changing workflow logic when any of these happen:
 
 When several FastGPT OpenAPI keys exist on the same machine, assume they may point to different apps even if they share the same base URL.
 
-Required checks:
+Required validationChecks:
 
 - Do not select a key by filename alone. Confirm the app purpose through a non-secret inventory entry or a fresh `detail=true` probe.
 - Compare the observed first nodes in `responseData` to the expected workflow chain. For example, a governed target business app may show `workflowStart -> normalizeInput -> callContextPrepWft -> callDomainLogicWft -> callFinalAssemblerWft`; a response that immediately hits `datasetSearchNode` is a different app.
@@ -152,7 +152,7 @@ Likely cause:
 - upstream bridge/normalize node already lost the real inputs
 - generation-time registries were not available to the workflow tool code node at runtime
 
-First checks:
+First validationChecks:
 - inspect `customInputs/customOutputs` for the workflow tool and the first code node inside it
 - confirm static registries are compiled into code or loaded from a real runtime source, not passed as hidden object inputs
 - run the workflow JSON validator after generation

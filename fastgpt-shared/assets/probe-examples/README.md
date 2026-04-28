@@ -134,10 +134,10 @@ flowNodeType: "httpRequest468"
 
 ```text
 调用文件解析服务
-调用规则服务
+call validation service
 calling reference service
-回写审查结果
-调用外部审查辅助接口
+send task callback
+call external business API
 ```
 
 ---
@@ -155,8 +155,8 @@ calling reference service
 
 ```text
 逐文件解析
-逐章节检查
-逐条规则匹配
+per-section processing
+per-rule validation
 逐个问题证据补强
 ```
 
@@ -211,7 +211,7 @@ flowNodeType: "tools"
 适合production workflow中的位置：
 
 ```text
-候选问题发现
+candidate item discovery
 辅助工具选择
 探索性补充分析
 非production business workflow辅助推理
@@ -277,12 +277,12 @@ flowNodeType: "ifElseNode"
 适合production workflow中的位置：
 
 ```text
-是否缺少主文件
-是否存在 parserLimited
+check missing mandatory input
+check parsing limits
 是否存在 blocking_items
 是否允许输出final business output
 是否启用某个optional module
-是否进入降级输出
+是否进入fallback output
 ```
 
 注意：
@@ -344,10 +344,10 @@ flowNodeType: "chatNode"
 适合production workflow中的位置：
 
 ```text
-候选问题结构化
+candidate item structuring
 final decision/output structuring
-风险等级结构化
-最终报告包结构化
+priority/severity structuring
+final output package structuring
 ```
 
 注意：
@@ -481,7 +481,7 @@ pluginId: "YOUR_WORKFLOW_TOOL_APP_ID"
 当前默认调用的工具：
 
 ```text
-sample sample helper workflow workflow tool
+sample helper workflow tool
 ```
 
 当前默认 `pluginId`：
@@ -499,7 +499,7 @@ workflowStart
   ↓
 buildToolInput
   ↓
-callSupportWft(pluginModule + pluginId)
+callWorkflowTool(pluginModule + pluginId)
   ↓
 answerNode
 ```
@@ -507,7 +507,7 @@ answerNode
 输入映射：
 
 ```text
-callSupportWft.toolInput
+callWorkflowTool.toolInput
   ← buildToolInput.toolInput
 ```
 
@@ -700,7 +700,7 @@ pluginId: "<真实工具工作流 ID>"
 13. 15 HTTP 鉴权 JSON Body 能调用目标接口
 ```
 
-其中 `13_workflow_tool_call_example.json` 是拆分“主工作流 + 专项工具工作流”的关键验收项。
+其中 `13_workflow_tool_call_example.json` 是验证“主工作流 + workflow tool decomposition”的关键验收项。
 
 ---
 
@@ -767,7 +767,7 @@ pluginOutput
 
 ```text
 toolInput
-documentType
+taskType
 enabledModules
 targetFileUrls
 ...
