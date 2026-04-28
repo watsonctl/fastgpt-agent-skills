@@ -1,7 +1,7 @@
 # FastGPT 工作流 JSON Schema 探针包
 
 > 适用目的：用于在当前 FastGPT 实例中验证工作流 JSON 的 root schema、node schema、edge schema、variable schema、工具工作流调用方式和常用节点导入/运行行为。  
-> 使用边界：这些文件是 **schema 探针 / 最小样本**，不是正式审查业务工作流。正式 `00–100` 审查工作流应在这些探针全部通过后再生成。
+> 使用边界：These files are schema probes and minimal examples, not production business workflows. A production workflow bundle should be generated only after the relevant probes pass in the target FastGPT instance.
 
 更新时间：2026-04-28
 
@@ -101,7 +101,7 @@ flowNodeType: "code"
 version: "482"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 输入归一化
@@ -130,12 +130,12 @@ JSON Schema 校验
 flowNodeType: "httpRequest468"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 调用文件解析服务
 调用规则服务
-调用规范依据服务
+calling reference service
 回写审查结果
 调用外部审查辅助接口
 ```
@@ -151,7 +151,7 @@ flowNodeType: "httpRequest468"
 - 验证批量处理 / 循环处理结构。
 - 适合测试数组输入、逐项处理、结果聚合。
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 逐文件解析
@@ -163,7 +163,7 @@ flowNodeType: "httpRequest468"
 注意：
 
 - 如果导入成功但运行异常，应优先导出当前实例手工创建的最小批处理工作流，再反推真实 schema。
-- 不建议在正式主链初版中大量依赖复杂循环；优先使用 Code Run 做稳定聚合。
+- 不建议在production workflow main path初版中大量依赖复杂循环；优先使用 Code Run 做稳定聚合。
 
 ---
 
@@ -176,7 +176,7 @@ flowNodeType: "httpRequest468"
 - 验证并行执行节点结构。
 - 适合测试数组任务并发处理、结果收集和失败重试行为。
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 多专项模块并行审查
@@ -187,8 +187,8 @@ flowNodeType: "httpRequest468"
 
 注意：
 
-- 并行节点适合做“并发执行”，但正式结论仍应经过后置汇总、证据检查和最终协议收口。
-- 不应让并行分支直接输出最终正式报告。
+- 并行节点适合做“并发执行”，但final business output仍应经过后置汇总、证据检查和最终协议收口。
+- 不应让并行分支直接输出最终final user-facing report。
 
 ---
 
@@ -208,19 +208,19 @@ flowNodeType: "httpRequest468"
 flowNodeType: "tools"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 候选问题发现
 辅助工具选择
 探索性补充分析
-非正式审查辅助推理
+非production business workflow辅助推理
 ```
 
 限制：
 
-- 不建议作为正式审查结论主链。
-- 对正式审查系统，Tool Calling / AgentV2 应作为辅助层，而不是最终判定层。
+- 不建议作为final business output主链。
+- 对production business workflow系统，Tool Calling / AgentV2 应作为辅助层，而不是最终判定层。
 
 ---
 
@@ -240,7 +240,7 @@ flowNodeType: "tools"
 flowNodeType: "variableUpdate"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 维护 review_context
@@ -274,13 +274,13 @@ flowNodeType: "variableUpdate"
 flowNodeType: "ifElseNode"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 是否缺少主文件
 是否存在 parserLimited
 是否存在 blocked_items
-是否允许输出正式结论
+是否允许输出final business output
 是否启用某个专项模块
 是否进入降级输出
 ```
@@ -288,7 +288,7 @@ flowNodeType: "ifElseNode"
 注意：
 
 - 条件分支中的布尔值要注意当前实例是按 boolean 还是 string 比较。
-- 如果 `true` / `"true"` 行为不同，正式流程应统一用 Code Run 先归一化。
+- 如果 `true` / `"true"` 行为不同，production workflow应统一用 Code Run 先归一化。
 
 ---
 
@@ -308,7 +308,7 @@ flowNodeType: "ifElseNode"
 flowNodeType: "chatNode"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 审查意图归一化
@@ -321,7 +321,7 @@ flowNodeType: "chatNode"
 注意：
 
 - AI Chat 节点中的模型名需要替换为当前实例可用模型。
-- 正式流程中应限制模型自由发挥，尽量提供结构化输入和明确输出协议。
+- production workflow中应限制模型自由发挥，尽量提供结构化输入和明确输出协议。
 
 ---
 
@@ -341,11 +341,11 @@ flowNodeType: "chatNode"
 flowNodeType: "chatNode"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 候选问题结构化
-审查结论结构化
+final decision/output structuring
 风险等级结构化
 最终报告包结构化
 ```
@@ -373,7 +373,7 @@ flowNodeType: "chatNode"
 flowNodeType: "answerNode"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 正式 Markdown 报告输出
@@ -397,7 +397,7 @@ flowNodeType: "answerNode"
 
 - 验证知识库检索节点。
 - 测试 `datasetSearchNode` 的导入和运行行为。
-- 适合连接规范依据库、企业标准库、审查规则库、案例库。
+- 适合连接reference files库、企业标准库、审查规则库、案例库。
 
 关键节点：
 
@@ -411,19 +411,19 @@ flowNodeType: "datasetSearchNode"
 手动选择当前实例内的知识库
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
-规范依据检索
+reference service retrieval
 条款召回
-企业规则召回
+business rule retrieval
 案例参考召回
 ```
 
 限制：
 
 - 知识库检索结果不能直接等同于正式依据适用性结论。
-- 正式流程应在检索后增加规则适用性判断和证据约束。
+- production workflow应在检索后增加规则适用性判断和证据约束。
 
 ---
 
@@ -444,10 +444,10 @@ flowNodeType: "pluginModule"
 pluginId: "community-textEditor"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
-构造专项审查 Prompt
+构造domain-specific tool Prompt
 构造报告片段
 拼接审查依据摘要
 拼接证据矩阵说明
@@ -481,7 +481,7 @@ pluginId: "YOUR_WORKFLOW_TOOL_APP_ID"
 当前默认调用的工具：
 
 ```text
-证据材料整理工具工作流
+sample support-data preparation workflow tool
 ```
 
 当前默认 `pluginId`：
@@ -490,7 +490,7 @@ pluginId: "YOUR_WORKFLOW_TOOL_APP_ID"
 YOUR_WORKFLOW_TOOL_APP_ID
 ```
 
-该 `pluginId` 来自当前实例的正式审查主流程中的“调用证据材料整理”节点。
+该 `pluginId` 来自当前实例的production business workflow主流程中的“调用sample support-data preparation”节点。
 
 调用关系：
 
@@ -515,8 +515,8 @@ callSupportWft.reviewContext
 
 ```text
 supportReviewResult
-supportResult008
-supportPacket008
+supportResult
+supportPacket
 artifactIndex
 supportLayerContext
 ```
@@ -548,12 +548,12 @@ userFiles
 valueType: "arrayString"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
-待审主文件传递
-辅助资料传递
-规范依据文件传递
+primary uploaded file传递
+supporting files传递
+reference files forwarding
 上下文文件传递
 ```
 
@@ -580,12 +580,12 @@ valueType: "arrayString"
 flowNodeType: "httpRequest468"
 ```
 
-适合正式流程中的位置：
+适合production workflow中的位置：
 
 ```text
 调用内部文件解析服务
-调用企业规则服务
-调用审查任务状态回写接口
+calling business rule service
+调用task status callback API
 调用报告归档接口
 调用外部业务系统
 ```
@@ -648,7 +648,7 @@ pluginId: "<真实工具工作流 ID>"
 02_http_request_example.json
 03_batch_processing_probe.json
 04_parallel_run_probe.json
-05_tool_calling_probe.json.json
+05_tool_calling_probe.json
 
 06_variable_update_example.json
 07_condition_branch_example.json
@@ -662,7 +662,7 @@ pluginId: "<真实工具工作流 ID>"
 15_http_auth_json_body_example.json
 ```
 
-如果只验证正式审查主链所需能力，优先顺序为：
+如果只验证 production workflow main path 所需能力，优先顺序为：
 
 ```text
 00_empty_workflow_baseline.json
@@ -682,7 +682,7 @@ pluginId: "<真实工具工作流 ID>"
 
 ## 5. 正式工作流生成前的验收项
 
-在生成正式 `00–100` 审查工作流 JSON 前，应至少确认：
+在生成production workflow bundle JSON 前，应至少确认：
 
 ```text
 1. 00 空工作流可导入
@@ -704,7 +704,7 @@ pluginId: "<真实工具工作流 ID>"
 
 ---
 
-## 6. 对正式 00–100 审查工作流的建议
+## 6. 对production workflow bundle的建议
 
 建议第一版正式工作流采用：
 
@@ -729,20 +729,20 @@ Code Run：结构化、清洗、合并、校验
 HTTP Request：调用外部服务
 AI Chat：受控推理和表达
 Knowledge Search：依据召回
-Tool Calling / AgentV2：辅助候选发现，不做最终主审
-Workflow Tool Call：拆分专项审查工具工作流
+Tool Calling / AgentV2：辅助候选发现，不做最终final decision maker
+Workflow Tool Call：拆分domain-specific workflow tool
 Answer：最终协议输出
 ```
 
 不建议：
 
 ```text
-1. 让 AgentV2 直接替代正式审查主链
-2. 让知识库检索结果直接成为正式结论
+1. 让 AgentV2 直接替代production workflow main path
+2. 让知识库检索结果直接成为final business output
 3. 让工具工作流隐式读取主流程文件
 4. 用 runApp 继续模拟子工作流调用
 5. 在 JSON 中硬编码生产密钥
-6. 未做 JSON Schema 校验就输出正式结果
+6. 未做 JSON Schema 校验就输出final structured output
 ```
 
 ---
@@ -777,7 +777,7 @@ targetFileUrls
 
 ```text
 supportReviewResult
-supportPacket008
+supportPacket
 artifactIndex
 supportLayerContext
 ...
@@ -827,21 +827,21 @@ pluginId: "<目标工具工作流 ID>"
 17_plugin_input_output_minimal_example.json
 18_dataset_search_bound_example.json
 19_json_schema_validate_code_example.json
-20_final_review_contract_probe.json
+20_final_output_contract_probe.json
 ```
 
 其中最重要的是：
 
 ```text
 17_plugin_input_output_minimal_example.json
-20_final_review_contract_probe.json
+20_final_output_contract_probe.json
 ```
 
 ---
 
 ## 9. 总体结论
 
-当前探针包已经可以支撑正式审查工作流 JSON 的第一轮生成，但应遵守以下原则：
+当前探针包已经可以支撑production business workflow工作流 JSON 的第一轮生成，但应遵守以下原则：
 
 ```text
 1. 以当前实例导出的 JSON 为 System of Record
@@ -849,6 +849,6 @@ pluginId: "<目标工具工作流 ID>"
 3. 工具工作流调用使用 pluginModule，不使用 runApp
 4. 工具工作流本体使用 pluginInput / pluginOutput
 5. 文件、变量、知识库、HTTP、AI 输出都必须显式传递和校验
-6. 正式审查结论必须由固定协议收口，不由 Agent 自由输出
+6. Final business outputs should be closed by an explicit output contract rather than unconstrained agent free-form generation.
 ```
 

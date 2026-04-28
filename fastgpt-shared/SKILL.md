@@ -5,6 +5,8 @@ description: "Shared FastGPT contracts, diagnostics, scripts, and patterns."
 
 # FastGPT Shared Base
 
+> This repository is a community FastGPT workflow engineering skill pack. It focuses on workflow JSON generation, import readiness, runtime diagnostics, workflow-tool decomposition, and migration support. It complements FastGPT's maintainer-oriented skills such as API development, PR review, tests, and documentation i18n. It is not a replacement for FastGPT official contracts; generated workflows must be validated against the target FastGPT instance.
+
 Use this as the base layer for the FastGPT skill pack. It is the shared System of Record for:
 
 - official FastGPT contract references

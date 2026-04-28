@@ -14,7 +14,9 @@ Use this skill when a user asks you to create a new FastGPT workflow or RAG pipe
 3. Determine if the requirement needs a single workflow or a decomposed **Workflow + Workflow-Tools** architecture.
    - *Rule of thumb*: If the workflow has multiple distinct phases (e.g., entity extraction, knowledge retrieval, cross-check), isolate the complex parts into separate Workflow-Tools.
 
-## 2. Supported Node Types (v4.14.16+)
+## 2. Supported Node Types (observed against FastGPT v4.14.x exports/probes)
+
+> Always verify the generated JSON against the target FastGPT instance export/import behavior before treating these contracts as stable.
 
 You must ONLY use the following node types. Use `../fastgpt-shared/assets/probe-examples/` as the structural template.
 

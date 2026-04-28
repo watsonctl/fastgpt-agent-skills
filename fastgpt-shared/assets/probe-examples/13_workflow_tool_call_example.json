@@ -63,7 +63,7 @@
     {
       "nodeId": "buildReviewContext",
       "name": "构造工具输入 reviewContext",
-      "intro": "构造用于调用证据材料整理工具工作流的最小 reviewContext。",
+      "intro": "构造用于调用sample support-data preparation workflow tool的最小 reviewContext。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -122,7 +122,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ userChatInput, userFiles }) {\n  const reviewId = 'workflow-tool-call-probe-' + Date.now();\n  const targetFileUrls = Array.isArray(userFiles) ? userFiles.filter(Boolean) : [];\n  const candidateTitle = String(userChatInput || '').trim() || '工具工作流调用测试问题';\n\n  const reviewContext = {\n    reviewId,\n    documentType: 'construction_scheme',\n    documentTypeLabel: '施工方案',\n    query: candidateTitle,\n    targetFileUrls,\n    governedDatasetScope: {\n      profileId: 'probe.workflow_tool_call',\n      basisPackIds: [],\n      rulePackIds: []\n    },\n    evidenceRefIndex: {\n      'E-001': '用户输入 / 工具调用探针',\n      'F-001': targetFileUrls[0] || '未上传文件'\n    },\n    candidates: [\n      {\n        candidateId: 'support_material-candidate-001',\n        title: candidateTitle,\n        severityHint: 'medium',\n        moduleName: 'support_material',\n        summary: '这是主工作流调用工具工作流的最小 schema 探针，用于验证 pluginModule + pluginId + pluginInput/pluginOutput 映射。',\n        suggestion: '如本节点可正常返回 supportReviewResult，说明工具工作流调用链路有效。',\n        evidenceRefs: ['E-001'],\n        sourceRefs: ['F-001'],\n        evidenceStatus: targetFileUrls.length ? 'grounded' : 'visibility_gap',\n        manualReviewNeeded: !targetFileUrls.length,\n        findingType: 'schema_probe',\n        reportVisibility: 'formal',\n        ruleHits: [\n          {\n            ruleId: 'workflow_tool_call_schema_probe',\n            rationale: '主工作流已通过 pluginModule 调用证据材料整理工具工作流。'\n          }\n        ]\n      }\n    ]\n  };\n\n  return {\n    reviewContext,\n    reviewContextJson: JSON.stringify(reviewContext, null, 2)\n  };\n}",
+          "value": "function main({ userChatInput, userFiles }) {\n  const reviewId = 'workflow-tool-call-probe-' + Date.now();\n  const targetFileUrls = Array.isArray(userFiles) ? userFiles.filter(Boolean) : [];\n  const candidateTitle = String(userChatInput || '').trim() || '工具工作流调用测试问题';\n\n  const reviewContext = {\n    reviewId,\n    documentType: 'construction_scheme',\n    documentTypeLabel: '施工方案',\n    query: candidateTitle,\n    targetFileUrls,\n    governedDatasetScope: {\n      profileId: 'probe.workflow_tool_call',\n      basisPackIds: [],\n      rulePackIds: []\n    },\n    evidenceRefIndex: {\n      'E-001': '用户输入 / 工具调用探针',\n      'F-001': targetFileUrls[0] || '未上传文件'\n    },\n    candidates: [\n      {\n        candidateId: 'support_material-candidate-001',\n        title: candidateTitle,\n        severityHint: 'medium',\n        moduleName: 'support_material',\n        summary: '这是主工作流调用工具工作流的最小 schema 探针，用于验证 pluginModule + pluginId + pluginInput/pluginOutput 映射。',\n        suggestion: '如本节点可正常返回 supportReviewResult，说明工具工作流调用链路有效。',\n        evidenceRefs: ['E-001'],\n        sourceRefs: ['F-001'],\n        evidenceStatus: targetFileUrls.length ? 'grounded' : 'visibility_gap',\n        manualReviewNeeded: !targetFileUrls.length,\n        findingType: 'schema_probe',\n        reportVisibility: 'formal',\n        ruleHits: [\n          {\n            ruleId: 'workflow_tool_call_schema_probe',\n            rationale: '主工作流已通过 pluginModule 调用sample support-data preparation workflow tool。'\n          }\n        ]\n      }\n    ]\n  };\n\n  return {\n    reviewContext,\n    reviewContextJson: JSON.stringify(reviewContext, null, 2)\n  };\n}",
           "debugLabel": "",
           "toolDescription": ""
         },
@@ -230,8 +230,8 @@
     },
     {
       "nodeId": "callSupportWft",
-      "name": "调用证据材料整理工具",
-      "intro": "通过 pluginModule 调用真实工具工作流。pluginId 指向当前实例中的“证据材料整理”工具工作流。",
+      "name": "调用sample support-data preparation工具",
+      "intro": "通过 pluginModule 调用真实工具工作流。pluginId 指向当前实例中的“sample support-data preparation”工具工作流。",
       "avatar": "/imgs/workflow/tool.svg",
       "flowNodeType": "pluginModule",
       "showStatus": false,
@@ -280,22 +280,22 @@
           "valueType": "object",
           "type": "dynamic",
           "key": "supportReviewResult",
-          "label": "证据材料整理结果",
+          "label": "sample support-data preparation结果",
           "description": ""
         },
         {
-          "id": "supportResult008",
+          "id": "supportResult",
           "valueType": "object",
           "type": "dynamic",
-          "key": "supportResult008",
+          "key": "supportResult",
           "label": "证据线索摘要",
           "description": ""
         },
         {
-          "id": "supportPacket008",
+          "id": "supportPacket",
           "valueType": "object",
           "type": "dynamic",
-          "key": "supportPacket008",
+          "key": "supportPacket",
           "label": "证据意见包",
           "description": ""
         },
@@ -343,7 +343,7 @@
           "description": "输出给用户的文本。",
           "placeholder": "",
           "selectedTypeIndex": 0,
-          "value": "## 工具工作流调用结果\\n\\n### supportReviewResult\\n{{$callSupportWft.supportReviewResult$}}\\n\\n### supportPacket008\\n{{$callSupportWft.supportPacket008$}}\\n\\n### supportLayerContext\\n{{$callSupportWft.supportLayerContext$}}\\n\\n---\\n\\n### 输入 reviewContext\\n{{$buildReviewContext.reviewContextJson$}}",
+          "value": "## 工具工作流调用结果\\n\\n### supportReviewResult\\n{{$callSupportWft.supportReviewResult$}}\\n\\n### supportPacket\\n{{$callSupportWft.supportPacket$}}\\n\\n### supportLayerContext\\n{{$callSupportWft.supportLayerContext$}}\\n\\n---\\n\\n### 输入 reviewContext\\n{{$buildReviewContext.reviewContextJson$}}",
           "debugLabel": "",
           "toolDescription": ""
         }
@@ -372,7 +372,7 @@
     }
   ],
   "chatConfig": {
-    "welcomeText": "这是工具工作流调用探针。输入任意文本后，主工作流会构造 reviewContext，并通过 pluginModule 调用“证据材料整理”工具工作流。",
+    "welcomeText": "这是工具工作流调用探针。输入任意文本后，主工作流会构造 reviewContext，并通过 pluginModule 调用“sample support-data preparation”工具工作流。",
     "variables": [],
     "scheduledTriggerConfig": {
       "cronString": "",

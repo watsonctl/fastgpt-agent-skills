@@ -7,35 +7,35 @@
   "usesWorkflowTools": true,
   "workflowToolCount": 4,
   "bindingMode": "by-name-script",
-  "mainWorkflowTemplateJson": "<project-root>/fastgpt-workflows/【Y测试勿删】知识库-工标问答.template.json",
-  "mainWorkflowBoundJson": "<project-root>/fastgpt-workflows/【Y测试勿删】知识库-工标问答.json",
+  "mainWorkflowTemplateJson": "<project-root>/fastgpt-workflows/【Y测试勿删】知识库-example-rag-project.template.json",
+  "mainWorkflowBoundJson": "<project-root>/fastgpt-workflows/【Y测试勿删】知识库-example-rag-project.json",
   "workflowTools": [
     {
       "role": "standardLookup",
-      "name": "工标-标准定位工具",
-      "file": "<project-root>/fastgpt-workflows/工标-标准定位工具.json"
+      "name": "example-标准定位工具",
+      "file": "<project-root>/fastgpt-workflows/example-标准定位工具.json"
     },
     {
       "role": "metadataResolver",
-      "name": "工标-元数据补全工具",
-      "file": "<project-root>/fastgpt-workflows/工标-元数据补全工具.json"
+      "name": "example-元数据补全工具",
+      "file": "<project-root>/fastgpt-workflows/example-元数据补全工具.json"
     },
     {
       "role": "retrievalOrchestrator",
-      "name": "工标-检索编排工具",
-      "file": "<project-root>/fastgpt-workflows/工标-检索编排工具.json"
+      "name": "example-检索编排工具",
+      "file": "<project-root>/fastgpt-workflows/example-检索编排工具.json"
     },
     {
       "role": "evidenceBundler",
-      "name": "工标-证据整理与降级工具",
-      "file": "<project-root>/fastgpt-workflows/工标-证据整理与降级工具.json"
+      "name": "example-证据整理与降级工具",
+      "file": "<project-root>/fastgpt-workflows/example-证据整理与降级工具.json"
     }
   ],
   "workflowSource": "<project-root>/lib/fastgpt/engineering-standards-workflow.ts",
   "generatorScript": "<project-root>/scripts/fastgpt/generate-engineering-standards-workflow.ts",
   "bindingScript": "<project-root>/scripts/fastgpt/bind-engineering-standards-workflow-tools.ts",
-  "bundleManifest": "<project-root>/fastgpt-workflows/工标问答.workflow-bundle.manifest.json",
-  "bindingsExample": "<project-root>/fastgpt-workflows/工标问答.workflow-tool-bindings.example.json",
+  "bundleManifest": "<project-root>/fastgpt-workflows/example-rag-project.workflow-bundle.manifest.json",
+  "bindingsExample": "<project-root>/fastgpt-workflows/example-rag-project.workflow-tool-bindings.example.json",
   "tests": [
     "<project-root>/__tests__/lib/fastgpt/engineering-standards-workflow.test.ts"
   ],

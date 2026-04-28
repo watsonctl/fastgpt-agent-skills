@@ -30,7 +30,7 @@ When several FastGPT OpenAPI keys exist on the same machine, assume they may poi
 Required checks:
 
 - Do not select a key by filename alone. Confirm the app purpose through a non-secret inventory entry or a fresh `detail=true` probe.
-- Compare the observed first nodes in `responseData` to the expected workflow chain. For example, a governed scheme-review app may show `workflowStart -> normalizeInput -> callReviewContextWft -> callAiReviewWft -> callFinalAssemblerWft`; a response that immediately hits `datasetSearchNode` is a different app.
+- Compare the observed first nodes in `responseData` to the expected workflow chain. For example, a governed target business app may show `workflowStart -> normalizeInput -> callReviewContextWft -> callAiReviewWft -> callFinalAssemblerWft`; a response that immediately hits `datasetSearchNode` is a different app.
 - Treat `HTTP 200 + empty choices.message.content` as a failure until `responseData` proves a valid final output path. Do not count it as business success.
 - If the wrong key was used, classify the diagnosis as `wrong_agent_key` before investigating workflow internals.
 

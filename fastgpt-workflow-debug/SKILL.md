@@ -3,7 +3,7 @@ description: FastGPT 工作流 JSON 调试与优化 Skill。覆盖主工作流�
 metadata:
     github-path: fastgpt-workflow-debug
     github-ref: refs/heads/main
-    github-repo: https://github.com/watsonctl/agent-skills
+    github-repo: https://github.com/watsonctl/fastgpt-agent-skills
     github-tree-sha: 0cebfd28ddee9bb44a44f66a323583ae73c33f22
 name: fastgpt-workflow-debug
 ---
@@ -75,7 +75,7 @@ tools              — toolCall
 | 代码类型 | `codeType` | `js` 或 `py` |
 | 数据集选择 | `datasets` | 知识库选择列表；`selectDataset` 只应出现在 `renderTypeList/valueType`，不要作为运行时 input key |
 | 相似度 | `similarity` | 检索相似度阈值 |
-| 检索数量 | `limit` | 当前项目实测 FastGPT 中应按 chunk 数量/检索上限治理；主检索建议 quick≈20、standard≈50、deep≈100，禁止误设 4000+ |
+| 检索数量 | `limit` | observed in tested FastGPT instances 中应按 chunk 数量/检索上限治理；主检索建议 quick≈20、standard≈50、deep≈100，禁止误设 4000+ |
 | 搜索模式 | `searchMode` | `embedding` / `fullTextRecall` / `mixedRecall` |
 | ReRank | `usingReRank` | 是否启用重排序 |
 | 条件判断 | `ifElseList` | ifElse 条件列表 |
@@ -549,7 +549,7 @@ workflowStart
 
 1. **不要凭记忆猜 FastGPT 字段名**。必须对照 §0 的官方合约。
 2. **不要手动格式化大型 JSON**。用 `jq` 或 `JSON.stringify(null, 2)` 处理。
-3. **不要把 limit 当 token 预算**。当前项目实测主检索 limit 应按 chunk 数/检索上限治理：quick≈20、standard≈50、deep≈100；4000+ 属于高风险配置。
+3. **不要把 limit 当 token 预算**。observed in tested FastGPT instances, main search limit 应按 chunk 数/检索上限治理：quick≈20、standard≈50、deep≈100；4000+ 属于高风险配置。
 4. **修复代码节点时注意双重转义**。最安全的方法是先写好 JS 代码 → 再用 `JSON.stringify()` 生成 JSON 值。
 5. **修改 JSON 后必须重新校验**。至少执行 `jq .` 确认格式正确。
 
