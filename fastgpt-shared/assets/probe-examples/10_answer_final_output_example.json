@@ -180,7 +180,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ question }) {\n  return {\n    final_json: JSON.stringify({\n      status: 'success',\n      schema_probe: 'answer_final_output',\n      input: question || '',\n      issues: [],\n      blocked_items: [],\n      generated_at: new Date().toISOString()\n    }, null, 2)\n  };\n}"
+          "value": "function main({ question }) {\n  return {\n    final_json: JSON.stringify({\n      status: 'success',\n      schema_probe: 'answer_final_output',\n      input: question || '',\n      issues: [],\n      blocking_items: [],\n      generated_at: new Date().toISOString()\n    }, null, 2)\n  };\n}"
         }
       ],
       "outputs": [

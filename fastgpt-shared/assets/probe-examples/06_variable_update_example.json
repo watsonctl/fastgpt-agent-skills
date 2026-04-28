@@ -123,7 +123,7 @@
     },
     {
       "nodeId": "prepareContextNode",
-      "name": "构造 review_context",
+      "name": "构造 task_context",
       "intro": "执行一段脚本代码，通常用于数据处理、格式转换、逻辑计算。",
       "avatar": "/imgs/workflow/code.svg",
       "flowNodeType": "code",
@@ -180,7 +180,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ question }) {\n  const obj = {\n    task_type: 'schema_probe',\n    document_type: 'unknown',\n    strict_mode: true,\n    user_input: question || '',\n    generated_at: new Date().toISOString()\n  };\n  return { review_context: JSON.stringify(obj), ok: true };\n}"
+          "value": "function main({ question }) {\n  const obj = {\n    task_type: 'schema_probe',\n    document_type: 'unknown',\n    strict_mode: true,\n    user_input: question || '',\n    generated_at: new Date().toISOString()\n  };\n  return { task_context: JSON.stringify(obj), ok: true };\n}"
         }
       ],
       "outputs": [
@@ -212,11 +212,11 @@
           "type": "static"
         },
         {
-          "id": "review_context",
+          "id": "task_context",
           "type": "dynamic",
-          "key": "review_context",
+          "key": "task_context",
           "valueType": "string",
-          "label": "review_context"
+          "label": "task_context"
         },
         {
           "id": "ok",
@@ -251,11 +251,11 @@
             {
               "variable": [
                 "VARIABLE_NODE_ID",
-                "review_context"
+                "task_context"
               ],
               "value": [
                 "prepareContextNode",
-                "review_context"
+                "task_context"
               ],
               "valueType": "string",
               "renderType": "reference"
@@ -288,7 +288,7 @@
           "label": "core.module.input.label.Response content",
           "description": "core.module.input.description.Response content",
           "placeholder": "core.module.input.description.Response content",
-          "value": "变量更新结果：\n{{$VARIABLE_NODE_ID.review_context$}}\n\nCode 原始结果：\n{{$prepareContextNode.system_rawResponse$}}",
+          "value": "变量更新结果：\n{{$VARIABLE_NODE_ID.task_context$}}\n\nCode 原始结果：\n{{$prepareContextNode.system_rawResponse$}}",
           "debugLabel": "",
           "toolDescription": ""
         }
@@ -319,9 +319,9 @@
   "chatConfig": {
     "variables": [
       {
-        "id": "review_context",
-        "key": "review_context",
-        "label": "review_context",
+        "id": "task_context",
+        "key": "task_context",
+        "label": "task_context",
         "type": "custom",
         "required": false,
         "maxLen": 2000,

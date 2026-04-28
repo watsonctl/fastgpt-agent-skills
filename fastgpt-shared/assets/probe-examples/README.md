@@ -179,10 +179,10 @@ calling reference service
 适合production workflow中的位置：
 
 ```text
-多专项模块并行审查
+multiple domain modules in parallel
 多文件并行解析
-多规则包并行命中
-多审查维度并行生成候选问题
+multiple rule/check packs in parallel
+generate candidate findings across multiple dimensions
 ```
 
 注意：
@@ -243,11 +243,11 @@ flowNodeType: "variableUpdate"
 适合production workflow中的位置：
 
 ```text
-维护 review_context
-维护 evidence_matrix
-维护 blocked_items
-维护 candidate_issues
-维护 formal_issues
+维护 task_context
+维护 support_matrix
+维护 blocking_items
+维护 candidate_findings
+维护 confirmed_findings
 维护 final_result
 ```
 
@@ -279,7 +279,7 @@ flowNodeType: "ifElseNode"
 ```text
 是否缺少主文件
 是否存在 parserLimited
-是否存在 blocked_items
+是否存在 blocking_items
 是否允许输出final business output
 是否启用某个专项模块
 是否进入降级输出
@@ -311,11 +311,11 @@ flowNodeType: "chatNode"
 适合production workflow中的位置：
 
 ```text
-审查意图归一化
+task intent normalization
 材料摘要
-受控审查判断
+controlled decision step
 候选问题表达
-报告语言润色
+final response polishing
 ```
 
 注意：
@@ -711,12 +711,12 @@ pluginId: "<真实工具工作流 ID>"
 ```text
 00_start_input
 10_input_normalize
-20_visibility_precheck
-30_basis_resolve
-40_parallel_or_sequential_special_review
-50_evidence_check
-60_issue_layering
-70_final_assembly
+20_context_prepare
+30_reference_or_data_lookup
+40_domain_tool_execution
+50_result_merge
+60_quality_gate
+70_final_output_assembly
 80_json_schema_validate
 90_answer_output
 100_callback_or_export
