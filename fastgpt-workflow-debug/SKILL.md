@@ -264,14 +264,14 @@ const extractFastGPTPlainText = (value) => collectFastGPTTextFragments(value)
    - 修复：最终 prompt 必须要求复制真实 quote id，证据上下文应显式给出 `引用写法：[id](CITE)`；不要只把 quoteQA 传给 AI。
 
 2. **registry 覆盖缺失**
-   - 特征：用户问题出现 `南方电网 / 南网 / Q/CSG`，但 `normalizeInput.availableDatasetKeys` 不含 `southern_grid`；或出现 `DL/NB/电力` 但不含 `energy_power`。
+   - 特征：用户问题出现 `domain-specific organization / domain-specific organization / domain-specific standard alias`，但 `normalizeInput.availableDatasetKeys` 不含 `southern_grid`；或出现 `domain-specific standard family` 但不含 `energy_power`。
    - 后果：检索只能在默认小 registry 内兜底，表现会显著低于原系统。
    - 修复：从 SoR 的 dataset 清单生成全量 registry，然后用 analyzer/bridge 收敛检索范围，不要把未挂库误判为模型能力差。
 
-3. **推断标准被误当成用户明确指定**
+3. **inferred source constraints mistaken for explicit constraints**
    - 特征：用户原文没有标准号/标准名，`analysisBridge.hasExplicitStandard=true` 且 `precisionTasks` 非空。
    - 后果：FAQ 被压制，precision 锁定错误标准，ranking wrong-standard penalty 反向伤害正确答案。
-   - 修复：拆分 `userExplicitStandards` 与 `inferredStandards`；只有用户原文明确出现的标准可进入硬 precision lock，推断标准只能作为软召回 query。
+   - 修复：拆分 `userExplicitStandards` 与 `inferredStandards`；只有用户原文明确出现的标准可进入硬 precision lock，inferred source constraints只能作为软召回 query。
 
 4. **API detail=false 误判 RAG 未运行**
    - FastGPT 对话接口 `detail=false` 只看最终文本。要判断是否接上 RAG，必须使用 `detail=true` 或导出 `flowResponses`，并检查 `candidateQuotes / quoteList / finalQuoteQA / citeIds`。
@@ -333,7 +333,7 @@ code 字段的值本身在 JSON 字符串内，因此：
 - 但 `pluginOutput.generalQuotes` 为空或 `candidateCount=0`；同时精准检索 `precisionLoop` 曾经能返回结果。
 
 **根因模式**：
-- 在部分自部署 FastGPT 中，工作流工具内部 `parallelRun` 的 `parallelSuccessResults` 不稳定或不适合承载 datasetSearch quoteQA 聚合；之前靠“推断标准硬锁 precisionTasks”偶然有结果，一旦修正为软召回，泛检索 0 结果就暴露。
+- 在部分自部署 FastGPT 中，工作流工具内部 `parallelRun` 的 `parallelSuccessResults` 不稳定或不适合承载 datasetSearch quoteQA 聚合；之前靠“inferred source constraints硬锁 precisionTasks”偶然有结果，一旦修正为软召回，泛检索 0 结果就暴露。
 
 **修复方式**：
 - 对关键 RAG 泛检索优先使用 `loop -> loopEnd -> loopArray -> flatten code`，不要把主证据链建立在 `parallelRun.parallelSuccessResults` 上。
@@ -352,7 +352,7 @@ code 字段的值本身在 JSON 字符串内，因此：
 
 **修复方式**：
 - 首轮泛检索只保留 top 1 主查询 × top 2 目标库 × no-tag/高置信 tag 变体，通常 4 个、最多 6 个任务。
-- analyzer 推断标准进入 `deferredGeneralTasks`，只作为低证据补查/诊断，不进入首轮 loop。
+- analyzer inferred source constraints进入 `deferredGeneralTasks`，只作为低证据补查/诊断，不进入首轮 loop。
 - 保持“国标优先、行业库补强”为任务顺序和证据排序优先级；不要把它实现成全库全 tag 串行扫描。
 - 在 bridge 输出 `initialGeneralTaskCount / deferredGeneralTaskCount / retrievalPriorityPlan`，运行态看到 `generalTasks>6` 应优先判为检索预算失控。
 
@@ -380,7 +380,7 @@ code 字段的值本身在 JSON 字符串内，因此：
 **故障特征**：
 - 主工作流 `pluginModule.toolInput` 显示 `generalTasks/userQuery/queryType` 非空。
 - 工作流工具内部返回空结果，例如 `candidateCount=0`、`finalUserPrompt` 里 `用户问题:` 为空。
-- 标准定位、检索编排、证据整理多个工具同时表现为“像没收到参数”。
+- source routing、检索编排、source aggregation多个工具同时表现为“像没收到参数”。
 
 **优先排查**：
 1. 打开被调用的工作流工具 JSON。
@@ -529,7 +529,7 @@ workflowStart
             → entityLookup (pluginModule: 实体定位工具)
             → metadataEnrich (pluginModule: 元数据补全工具)
             → retrieval (pluginModule: 检索编排工具)
-            → evidenceBundle (pluginModule: 证据整理工具)
+            → evidenceBundle (pluginModule: source aggregation工具)
             → finalAnswer (chatNode: 最终回答)
 ```
 
@@ -540,7 +540,7 @@ workflowStart
 | 实体定位工具 | `YOUR_APP_ID` | 实体名 → collectionId |
 | 元数据补全工具 | `YOUR_APP_ID` | collectionId → 元信息 |
 | 检索编排工具 | `YOUR_APP_ID` | 多模式检索编排 |
-| 证据整理工具 | `YOUR_APP_ID` | 证据评分与降级 |
+| source aggregation工具 | `YOUR_APP_ID` | 证据评分与降级 |
 
 > 在你的项目中，用实际的 appId 替换 `YOUR_APP_ID`。
 

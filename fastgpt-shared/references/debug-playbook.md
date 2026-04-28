@@ -292,10 +292,10 @@ const extractFastGPTPlainText = (value) => collectFastGPTTextFragments(value)
    - 后果：首轮检索快了但命中漂移，答案看似完整但依据不准。
    - 修复：把口语扩展做成“概念族窄触发”，只追加少量高信号近义词/规范术语，不做无限口语枚举，也不要把某个项目的领域词包写成 shared 默认策略。
 
-4. **推断标准被误当成用户明确指定**
+4. **inferred source constraints mistaken for explicit constraints**
    - 特征：用户原文没有标准号/标准名，`analysisBridge.hasExplicitStandard=true` 且 `precisionTasks` 非空。
    - 后果：FAQ 被压制，precision 锁定错误标准，ranking wrong-standard penalty 反向伤害正确答案。
-   - 修复：拆分 `userExplicitStandards` 与 `inferredStandards`；只有用户原文明确出现的标准可进入硬 precision lock，推断标准只能作为软召回 query。
+   - 修复：拆分 `userExplicitStandards` 与 `inferredStandards`；只有用户原文明确出现的标准可进入硬 precision lock，inferred source constraints只能作为软召回 query。
 
 5. **API detail=false 误判 RAG 未运行**
    - FastGPT 对话接口 `detail=false` 只看最终文本。要判断是否接上 RAG，必须使用 `detail=true` 或导出 `flowResponses`，并检查 `candidateQuotes / quoteList / finalQuoteQA / citeIds`。`choices.message.content` 只是纯文本视图，不足以判断是否存在真实引用卡片。
@@ -389,7 +389,7 @@ FastGPT 页面能导入、运行约 1~3 秒后直接返回空值时，不要先�
 - 但 `pluginOutput.generalQuotes` 为空或 `candidateCount=0`；同时精准检索 `precisionLoop` 曾经能返回结果。
 
 **根因模式**：
-- 在部分自部署 FastGPT 中，工作流工具内部 `parallelRun` 的 `parallelSuccessResults` 不稳定或不适合承载 datasetSearch quoteQA 聚合；之前靠“推断标准硬锁 precisionTasks”偶然有结果，一旦修正为软召回，泛检索 0 结果就暴露。
+- 在部分自部署 FastGPT 中，工作流工具内部 `parallelRun` 的 `parallelSuccessResults` 不稳定或不适合承载 datasetSearch quoteQA 聚合；之前靠“inferred source constraints硬锁 precisionTasks”偶然有结果，一旦修正为软召回，泛检索 0 结果就暴露。
 
 **修复方式**：
 - 对关键 RAG 泛检索优先使用 `loop -> loopEnd -> loopArray -> flatten code`，不要把主证据链建立在 `parallelRun.parallelSuccessResults` 上。
@@ -408,7 +408,7 @@ FastGPT 页面能导入、运行约 1~3 秒后直接返回空值时，不要先�
 
 **修复方式**：
 - 首轮泛检索只保留 top 1 主查询 × top 2 目标库 × no-tag/高置信 tag 变体，通常 4 个、最多 6 个任务。
-- analyzer 推断标准进入 `deferredGeneralTasks`，只作为低证据补查/诊断，不进入首轮 loop。
+- analyzer inferred source constraints进入 `deferredGeneralTasks`，只作为低证据补查/诊断，不进入首轮 loop。
 - 保持“国标优先、行业库补强”为任务顺序和证据排序优先级；不要把它实现成全库全 tag 串行扫描。
 - 在 bridge 输出 `initialGeneralTaskCount / deferredGeneralTaskCount / retrievalPriorityPlan`，运行态看到 `generalTasks>6` 应优先判为检索预算失控。
 
@@ -436,7 +436,7 @@ FastGPT 页面能导入、运行约 1~3 秒后直接返回空值时，不要先�
 **故障特征**：
 - 主工作流 `pluginModule.toolInput` 显示 `generalTasks/userQuery/queryType` 非空。
 - 工作流工具内部返回空结果，例如 `candidateCount=0`、`finalUserPrompt` 里 `用户问题:` 为空。
-- 标准定位、检索编排、证据整理多个工具同时表现为“像没收到参数”。
+- source routing、检索编排、source aggregation多个工具同时表现为“像没收到参数”。
 
 **优先排查**：
 1. 打开被调用的工作流工具 JSON。

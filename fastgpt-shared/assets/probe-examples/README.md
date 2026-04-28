@@ -281,7 +281,7 @@ flowNodeType: "ifElseNode"
 是否存在 parserLimited
 是否存在 blocking_items
 是否允许输出final business output
-是否启用某个专项模块
+是否启用某个optional module
 是否进入降级输出
 ```
 
@@ -352,7 +352,7 @@ final decision/output structuring
 
 注意：
 
-- 即使模型支持 JSON 输出，正式链路也应在后面接 Code Run 做 JSON parse / schema 校验。
+- 即使模型支持 JSON 输出，production workflow也应在后面接 Code Run 做 JSON parse / schema 校验。
 - 不应直接信任 LLM 输出的 JSON 一定合法。
 
 ---
@@ -365,7 +365,7 @@ final decision/output structuring
 
 - 验证最终指定回复节点。
 - 验证将 Code Run 生成的 JSON 字符串作为最终输出。
-- 适合作为正式工作流最终输出节点模板。
+- 适合作为production workflow最终输出节点模板。
 
 关键节点：
 
@@ -376,8 +376,8 @@ flowNodeType: "answerNode"
 适合production workflow中的位置：
 
 ```text
-正式 Markdown 报告输出
-正式 JSON 结果输出
+production Markdown output
+production JSON output
 降级说明输出
 阻塞结果输出
 ```
@@ -397,7 +397,7 @@ flowNodeType: "answerNode"
 
 - 验证知识库检索节点。
 - 测试 `datasetSearchNode` 的导入和运行行为。
-- 适合连接reference files库、企业标准库、审查规则库、案例库。
+- 适合连接reference files库、企业标准库、business rule library、案例库。
 
 关键节点：
 
@@ -422,7 +422,7 @@ business rule retrieval
 
 限制：
 
-- 知识库检索结果不能直接等同于正式依据适用性结论。
+- 知识库检索结果不能直接等同于final evidence decision。
 - production workflow应在检索后增加规则适用性判断和证据约束。
 
 ---
@@ -449,8 +449,8 @@ pluginId: "community-textEditor"
 ```text
 构造domain-specific tool Prompt
 构造报告片段
-拼接审查依据摘要
-拼接证据矩阵说明
+拼接reference summary
+拼接source matrix summary
 ```
 
 注意：
@@ -481,7 +481,7 @@ pluginId: "YOUR_WORKFLOW_TOOL_APP_ID"
 当前默认调用的工具：
 
 ```text
-sample support-data preparation workflow tool
+sample sample helper workflow workflow tool
 ```
 
 当前默认 `pluginId`：
@@ -490,7 +490,7 @@ sample support-data preparation workflow tool
 YOUR_WORKFLOW_TOOL_APP_ID
 ```
 
-该 `pluginId` 来自当前实例的production business workflow主流程中的“调用sample support-data preparation”节点。
+该 `pluginId` 来自当前实例的production business workflow主流程中的“调用sample sample helper workflow”节点。
 
 调用关系：
 
@@ -515,8 +515,8 @@ callSupportWft.toolInput
 
 ```text
 toolResult
-supportResult
-supportPacket
+toolSummary
+toolPacket
 artifactIndex
 toolContext
 ```
@@ -593,7 +593,7 @@ calling business rule service
 注意：
 
 - 示例里的 token 是占位值。
-- 正式环境不应在 JSON 中硬编码真实密钥。
+- production environment不应在 JSON 中硬编码真实密钥。
 - 应优先使用 FastGPT 环境变量、密钥配置或后端代理处理鉴权。
 
 ---
@@ -680,7 +680,7 @@ pluginId: "<真实工具工作流 ID>"
 
 ---
 
-## 5. 正式工作流生成前的验收项
+## 5. pre-generation acceptance checklist for production workflows
 
 在生成production workflow bundle JSON 前，应至少确认：
 
@@ -706,7 +706,7 @@ pluginId: "<真实工具工作流 ID>"
 
 ## 6. 对production workflow bundle的建议
 
-建议第一版正式工作流采用：
+建议第一版production workflow采用：
 
 ```text
 00_start_input
@@ -777,7 +777,7 @@ targetFileUrls
 
 ```text
 toolResult
-supportPacket
+toolPacket
 artifactIndex
 toolContext
 ...

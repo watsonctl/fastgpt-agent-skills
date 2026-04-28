@@ -12,8 +12,8 @@
   "workflowTools": [
     {
       "role": "standardLookup",
-      "name": "example-标准定位工具",
-      "file": "<project-root>/fastgpt-workflows/example-标准定位工具.json"
+      "name": "example-source routing工具",
+      "file": "<project-root>/fastgpt-workflows/example-source routing工具.json"
     },
     {
       "role": "metadataResolver",
@@ -27,8 +27,8 @@
     },
     {
       "role": "evidenceBundler",
-      "name": "example-证据整理与降级工具",
-      "file": "<project-root>/fastgpt-workflows/example-证据整理与降级工具.json"
+      "name": "example-source aggregation与降级工具",
+      "file": "<project-root>/fastgpt-workflows/example-source aggregation与降级工具.json"
     }
   ],
   "workflowSource": "<project-root>/lib/fastgpt/engineering-standards-workflow.ts",
