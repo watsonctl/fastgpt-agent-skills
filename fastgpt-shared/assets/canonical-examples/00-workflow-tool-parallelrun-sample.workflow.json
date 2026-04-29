@@ -3,7 +3,7 @@
     {
       "nodeId": "pluginConfig",
       "name": "系统配置",
-      "intro": "最小可导入样例：workflow tool + loop。用于验证 FastGPT 批量/循环运行节点结构。",
+      "intro": "最小可导入样例：workflow tool + parallelRun。用于验证 FastGPT 并行运行节点结构。",
       "avatar": "core/workflow/template/systemConfig",
       "flowNodeType": "pluginConfig",
       "showStatus": false,
@@ -57,8 +57,8 @@
     },
     {
       "nodeId": "prepareItems",
-      "name": "准备循环数组",
-      "intro": "构造一个 arrayAny，供批量运行/loop 节点消费。",
+      "name": "准备并行数组",
+      "intro": "构造一个 arrayAny，供并行运行节点消费。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -167,17 +167,17 @@
           "valueType": "arrayAny",
           "type": "dynamic",
           "key": "itemArray",
-          "label": "循环输入数组",
+          "label": "并行输入数组",
           "description": ""
         }
       ]
     },
     {
-      "nodeId": "batchLoopSample",
-      "name": "批量运行",
-      "intro": "当前实例已验证结构：loopInputArray + loopStart + loopEnd。",
-      "avatar": "core/workflow/template/loop",
-      "flowNodeType": "loop",
+      "nodeId": "parallelReviewSample",
+      "name": "并行运行",
+      "intro": "官方结构：数组 + 最大并发数 + 重试次数 + 固定开始/结束锚点。",
+      "avatar": "core/workflow/template/parallelRun",
+      "flowNodeType": "parallelRun",
       "showStatus": true,
       "position": {
         "x": 860,
@@ -201,6 +201,29 @@
           "toolDescription": ""
         },
         {
+          "key": "parallelRunMaxConcurrency",
+          "renderTypeList": [
+            "numberInput"
+          ],
+          "valueType": "number",
+          "label": "最大并发数",
+          "required": true,
+          "min": 1,
+          "value": 3
+        },
+        {
+          "key": "parallelRunMaxRetryTimes",
+          "renderTypeList": [
+            "numberInput"
+          ],
+          "valueType": "number",
+          "label": "单轮报错重试次数",
+          "required": true,
+          "min": 0,
+          "max": 5,
+          "value": 1
+        },
+        {
           "key": "childrenNodeIdList",
           "renderTypeList": [
             "hidden"
@@ -208,9 +231,9 @@
           "valueType": "arrayString",
           "label": "",
           "value": [
-            "loopStart",
-            "loopBody",
-            "loopEnd"
+            "parallelStart",
+            "parallelBody",
+            "parallelEnd"
           ]
         },
         {
@@ -243,24 +266,40 @@
       ],
       "outputs": [
         {
-          "id": "loopArray",
+          "id": "parallelSuccessResults",
           "valueType": "arrayAny",
           "type": "static",
-          "key": "loopArray",
-          "label": "循环结果",
+          "key": "parallelSuccessResults",
+          "label": "成功结果",
+          "description": ""
+        },
+        {
+          "id": "parallelFullResults",
+          "valueType": "arrayObject",
+          "type": "static",
+          "key": "parallelFullResults",
+          "label": "完整结果",
+          "description": ""
+        },
+        {
+          "id": "parallelStatus",
+          "valueType": "string",
+          "type": "static",
+          "key": "parallelStatus",
+          "label": "完成状态",
           "description": ""
         }
       ],
       "childrenNodeIdList": [
-        "loopStart",
-        "loopBody",
-        "loopEnd"
+        "parallelStart",
+        "parallelBody",
+        "parallelEnd"
       ]
     },
     {
-      "nodeId": "loopStart",
+      "nodeId": "parallelStart",
       "name": "开始",
-      "intro": "批量运行/loop 内部固定开始锚点。",
+      "intro": "并行运行内部固定开始锚点。",
       "avatar": "core/workflow/template/loopStart",
       "flowNodeType": "loopStart",
       "showStatus": false,
@@ -307,11 +346,11 @@
           "description": ""
         }
       ],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "parallelReviewSample"
     },
     {
-      "nodeId": "loopBody",
-      "name": "循环体-处理当前项",
+      "nodeId": "parallelBody",
+      "name": "并行体-处理当前项",
       "intro": "示例只做确定性处理：把当前项转为大写并封装为 JSON 字符串。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
@@ -370,7 +409,7 @@
             "valueType": true
           },
           "value": [
-            "loopStart",
+            "parallelStart",
             "loopStartInput"
           ]
         },
@@ -389,7 +428,7 @@
             "valueType": true
           },
           "value": [
-            "loopStart",
+            "parallelStart",
             "loopStartIndex"
           ]
         },
@@ -407,7 +446,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ currentItem, index }){\n  const text = currentItem == null ? '' : String(currentItem);\n  return {\n    processed: JSON.stringify({\n      index,\n      input: currentItem,\n      output: text.toUpperCase(),\n      executorMode: 'loop_sample_code_body'\n    })\n  };\n}"
+          "value": "function main({ currentItem, index }){\n  const text = currentItem == null ? '' : String(currentItem);\n  return {\n    processed: JSON.stringify({\n      index,\n      input: currentItem,\n      output: text.toUpperCase(),\n      executorMode: 'parallelRun_sample_code_body'\n    })\n  };\n}"
         }
       ],
       "outputs": [
@@ -444,12 +483,12 @@
           "description": ""
         }
       ],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "parallelReviewSample"
     },
     {
-      "nodeId": "loopEnd",
+      "nodeId": "parallelEnd",
       "name": "结束",
-      "intro": "批量运行/loop 内部固定结束锚点。",
+      "intro": "并行运行内部固定结束锚点。",
       "avatar": "core/workflow/template/loopEnd",
       "flowNodeType": "loopEnd",
       "showStatus": false,
@@ -468,18 +507,18 @@
           "label": "",
           "required": true,
           "value": [
-            "loopBody",
+            "parallelBody",
             "processed"
           ]
         }
       ],
       "outputs": [],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "parallelReviewSample"
     },
     {
       "nodeId": "collectResults",
       "name": "汇总并行结果",
-      "intro": "解析循环聚合结果，输出给工具调用方。",
+      "intro": "解析并行成功结果，输出给工具调用方。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -523,9 +562,9 @@
           "toolDescription": ""
         },
         {
-          "key": "loopResult",
+          "key": "successResults",
           "valueType": "arrayAny",
-          "label": "loopResult",
+          "label": "successResults",
           "renderTypeList": [
             "reference"
           ],
@@ -537,8 +576,27 @@
             "valueType": true
           },
           "value": [
-            "batchLoopSample",
-            "loopArray"
+            "parallelReviewSample",
+            "parallelSuccessResults"
+          ]
+        },
+        {
+          "key": "status",
+          "valueType": "string",
+          "label": "status",
+          "renderTypeList": [
+            "reference"
+          ],
+          "description": "",
+          "canEdit": true,
+          "required": true,
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "value": [
+            "parallelReviewSample",
+            "parallelStatus"
           ]
         },
         {
@@ -555,7 +613,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return { raw: String(value) }; }\n}\nfunction arr(value){ return Array.isArray(value) ? value : (value == null ? [] : [value]); }\nfunction main({ loopResult }){\n  const outputs = arr(loopResult).map(asObj);\n  return { outputs, status: 'completed' };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return { raw: String(value) }; }\n}\nfunction arr(value){ return Array.isArray(value) ? value : (value == null ? [] : [value]); }\nfunction main({ successResults, status }){\n  const outputs = arr(successResults).map(asObj);\n  return { outputs, status: status || 'unknown' };\n}"
         }
       ],
       "outputs": [
@@ -665,26 +723,26 @@
     },
     {
       "source": "prepareItems",
-      "target": "batchLoopSample",
+      "target": "parallelReviewSample",
       "sourceHandle": "prepareItems-source-right",
-      "targetHandle": "batchLoopSample-target-left"
+      "targetHandle": "parallelReviewSample-target-left"
     },
     {
-      "source": "loopStart",
-      "target": "loopBody",
-      "sourceHandle": "loopStart-source-right",
-      "targetHandle": "loopBody-target-left"
+      "source": "parallelStart",
+      "target": "parallelBody",
+      "sourceHandle": "parallelStart-source-right",
+      "targetHandle": "parallelBody-target-left"
     },
     {
-      "source": "loopBody",
-      "target": "loopEnd",
-      "sourceHandle": "loopBody-source-right",
-      "targetHandle": "loopEnd-target-left"
+      "source": "parallelBody",
+      "target": "parallelEnd",
+      "sourceHandle": "parallelBody-source-right",
+      "targetHandle": "parallelEnd-target-left"
     },
     {
-      "source": "batchLoopSample",
+      "source": "parallelReviewSample",
       "target": "collectResults",
-      "sourceHandle": "batchLoopSample-source-right",
+      "sourceHandle": "parallelReviewSample-source-right",
       "targetHandle": "collectResults-target-left"
     },
     {

@@ -3,7 +3,7 @@
     {
       "nodeId": "pluginConfig",
       "name": "系统配置",
-      "intro": "最小可导入样例：workflow tool + loop。用于验证 FastGPT 批量/循环运行节点结构。",
+      "intro": "从 review_subject/reference_material 抽取项目事实；不把 normativeBasisFiles 当事实来源。",
       "avatar": "core/workflow/template/systemConfig",
       "flowNodeType": "pluginConfig",
       "showStatus": false,
@@ -18,7 +18,7 @@
     {
       "nodeId": "pluginInput",
       "name": "工具开始",
-      "intro": "可不传 items；未传时使用内置测试数组。",
+      "intro": "配置工作流工具输入参数。",
       "avatar": "core/workflow/template/workflowStart",
       "flowNodeType": "pluginInput",
       "showStatus": false,
@@ -33,32 +33,55 @@
             "reference"
           ],
           "selectedTypeIndex": 0,
-          "valueType": "arrayString",
+          "valueType": "object",
           "canEdit": true,
-          "key": "items",
-          "label": "items",
-          "description": "可选：待并行处理的字符串数组",
-          "required": false,
+          "key": "reviewWiki",
+          "label": "reviewWiki",
+          "description": "",
+          "required": true,
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "待并行处理的字符串数组"
+          "toolDescription": "reviewWiki"
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "arrayObject",
+          "canEdit": true,
+          "key": "chunks",
+          "label": "chunks",
+          "description": "",
+          "required": true,
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "chunks"
         }
       ],
       "outputs": [
         {
-          "id": "items",
-          "key": "items",
-          "label": "items",
+          "id": "reviewWiki",
+          "key": "reviewWiki",
+          "label": "reviewWiki",
           "type": "hidden",
-          "valueType": "arrayString",
+          "valueType": "object",
+          "description": ""
+        },
+        {
+          "id": "chunks",
+          "key": "chunks",
+          "label": "chunks",
+          "type": "hidden",
+          "valueType": "arrayObject",
           "description": ""
         }
       ]
     },
     {
-      "nodeId": "prepareItems",
-      "name": "准备循环数组",
-      "intro": "构造一个 arrayAny，供批量运行/loop 节点消费。",
+      "nodeId": "prepareFactChunks",
+      "name": "准备事实抽取切片",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -66,7 +89,7 @@
         "x": 420,
         "y": 0
       },
-      "version": "482",
+      "version": "481",
       "inputs": [
         {
           "key": "system_addInputParam",
@@ -102,22 +125,22 @@
           "toolDescription": ""
         },
         {
-          "key": "items",
-          "valueType": "arrayString",
-          "label": "items",
+          "key": "chunks",
+          "valueType": "arrayObject",
+          "label": "chunks",
           "renderTypeList": [
             "reference"
           ],
           "description": "",
           "canEdit": true,
-          "required": false,
+          "required": true,
           "editField": {
             "key": true,
             "valueType": true
           },
           "value": [
             "pluginInput",
-            "items"
+            "chunks"
           ]
         },
         {
@@ -134,7 +157,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function arr(value){\n  if (Array.isArray(value)) return value.filter(v => v !== undefined && v !== null && String(v).trim() !== '');\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s = value.trim();\n    if (!s) return [];\n    try { const parsed = JSON.parse(s); return Array.isArray(parsed) ? parsed : [s]; } catch { return [s]; }\n  }\n  return [value];\n}\n\nfunction main({ items }){\n  const input = arr(items);\n  const itemArray = input.length ? input : ['alpha', 'beta', 'gamma'];\n  return { itemArray };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction main({ chunks }){ return { chunkArray: arr(chunks).filter(c=>c.documentRole !== 'normative_basis').map(c=>JSON.stringify(c)) }; }"
         }
       ],
       "outputs": [
@@ -163,27 +186,27 @@
           "description": ""
         },
         {
-          "id": "itemArray",
-          "valueType": "arrayAny",
+          "id": "chunkArray",
+          "valueType": "arrayString",
           "type": "dynamic",
-          "key": "itemArray",
-          "label": "循环输入数组",
+          "key": "chunkArray",
+          "label": "事实切片JSON",
           "description": ""
         }
       ]
     },
     {
-      "nodeId": "batchLoopSample",
+      "nodeId": "factBatchLoop",
       "name": "批量运行",
-      "intro": "当前实例已验证结构：loopInputArray + loopStart + loopEnd。",
+      "intro": "按 FastGPT 嵌套容器结构逐 chunk 抽取事实：loopInputArray + loopStart + loopEnd。",
       "avatar": "core/workflow/template/loop",
       "flowNodeType": "loop",
       "showStatus": true,
       "position": {
-        "x": 860,
+        "x": 900,
         "y": 0
       },
-      "version": "4.14.11",
+      "version": "481",
       "inputs": [
         {
           "key": "loopInputArray",
@@ -194,8 +217,8 @@
           "label": "数组",
           "required": true,
           "value": [
-            "prepareItems",
-            "itemArray"
+            "prepareFactChunks",
+            "chunkArray"
           ],
           "debugLabel": "",
           "toolDescription": ""
@@ -208,9 +231,9 @@
           "valueType": "arrayString",
           "label": "",
           "value": [
-            "loopStart",
-            "loopBody",
-            "loopEnd"
+            "factLoopStart",
+            "factLoopBody",
+            "factLoopEnd"
           ]
         },
         {
@@ -252,21 +275,21 @@
         }
       ],
       "childrenNodeIdList": [
-        "loopStart",
-        "loopBody",
-        "loopEnd"
+        "factLoopStart",
+        "factLoopBody",
+        "factLoopEnd"
       ]
     },
     {
-      "nodeId": "loopStart",
+      "nodeId": "factLoopStart",
       "name": "开始",
-      "intro": "批量运行/loop 内部固定开始锚点。",
+      "intro": "批量运行内部固定开始锚点。",
       "avatar": "core/workflow/template/loopStart",
       "flowNodeType": "loopStart",
       "showStatus": false,
       "position": {
-        "x": 940,
-        "y": 340
+        "x": 980,
+        "y": 360
       },
       "version": "481",
       "inputs": [
@@ -307,20 +330,20 @@
           "description": ""
         }
       ],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "factBatchLoop"
     },
     {
-      "nodeId": "loopBody",
-      "name": "循环体-处理当前项",
-      "intro": "示例只做确定性处理：把当前项转为大写并封装为 JSON 字符串。",
+      "nodeId": "factLoopBody",
+      "name": "循环体-事实抽取",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
       "position": {
-        "x": 1220,
-        "y": 340
+        "x": 1260,
+        "y": 360
       },
-      "version": "482",
+      "version": "481",
       "inputs": [
         {
           "key": "system_addInputParam",
@@ -370,7 +393,7 @@
             "valueType": true
           },
           "value": [
-            "loopStart",
+            "factLoopStart",
             "loopStartInput"
           ]
         },
@@ -389,7 +412,7 @@
             "valueType": true
           },
           "value": [
-            "loopStart",
+            "factLoopStart",
             "loopStartIndex"
           ]
         },
@@ -407,7 +430,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ currentItem, index }){\n  const text = currentItem == null ? '' : String(currentItem);\n  return {\n    processed: JSON.stringify({\n      index,\n      input: currentItem,\n      output: text.toUpperCase(),\n      executorMode: 'loop_sample_code_body'\n    })\n  };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction main({ currentItem, index }){ const c=asObj(currentItem); return { fact: JSON.stringify({ factId:`FACT-${hash(c.chunkId || c.text).slice(0,8)}`, sourceChunkId:c.chunkId, fileId:c.fileId, sourceBoundary:c.sourceBoundary, factText:textOf(c.text).slice(0,500), confidence:0.55, extractedBy:'deterministic_placeholder', sequenceIndex:index }) }; }"
         }
       ],
       "outputs": [
@@ -436,26 +459,26 @@
           "description": ""
         },
         {
-          "id": "processed",
+          "id": "fact",
           "valueType": "string",
           "type": "dynamic",
-          "key": "processed",
-          "label": "处理结果JSON",
+          "key": "fact",
+          "label": "事实JSON",
           "description": ""
         }
       ],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "factBatchLoop"
     },
     {
-      "nodeId": "loopEnd",
+      "nodeId": "factLoopEnd",
       "name": "结束",
-      "intro": "批量运行/loop 内部固定结束锚点。",
+      "intro": "批量运行内部固定结束锚点。",
       "avatar": "core/workflow/template/loopEnd",
       "flowNodeType": "loopEnd",
       "showStatus": false,
       "position": {
-        "x": 1540,
-        "y": 340
+        "x": 1700,
+        "y": 360
       },
       "version": "481",
       "inputs": [
@@ -468,26 +491,26 @@
           "label": "",
           "required": true,
           "value": [
-            "loopBody",
-            "processed"
+            "factLoopBody",
+            "fact"
           ]
         }
       ],
       "outputs": [],
-      "parentNodeId": "batchLoopSample"
+      "parentNodeId": "factBatchLoop"
     },
     {
-      "nodeId": "collectResults",
-      "name": "汇总并行结果",
-      "intro": "解析循环聚合结果，输出给工具调用方。",
+      "nodeId": "assembleFacts",
+      "name": "汇总事实",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
       "position": {
-        "x": 1780,
+        "x": 1500,
         "y": 0
       },
-      "version": "482",
+      "version": "481",
       "inputs": [
         {
           "key": "system_addInputParam",
@@ -537,8 +560,27 @@
             "valueType": true
           },
           "value": [
-            "batchLoopSample",
+            "factBatchLoop",
             "loopArray"
+          ]
+        },
+        {
+          "key": "reviewWiki",
+          "valueType": "object",
+          "label": "reviewWiki",
+          "renderTypeList": [
+            "reference"
+          ],
+          "description": "",
+          "canEdit": true,
+          "required": true,
+          "editField": {
+            "key": true,
+            "valueType": true
+          },
+          "value": [
+            "pluginInput",
+            "reviewWiki"
           ]
         },
         {
@@ -555,7 +597,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return { raw: String(value) }; }\n}\nfunction arr(value){ return Array.isArray(value) ? value : (value == null ? [] : [value]); }\nfunction main({ loopResult }){\n  const outputs = arr(loopResult).map(asObj);\n  return { outputs, status: 'completed' };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction main({ loopResult, reviewWiki }){ const facts=arr(loopResult).map(x=>asObj(x)).filter(x=>x.factId); const wiki=asObj(reviewWiki); wiki.facts=facts; return { facts, reviewWikiPatch:{facts}, reviewWiki:wiki }; }"
         }
       ],
       "outputs": [
@@ -584,19 +626,27 @@
           "description": ""
         },
         {
-          "id": "outputs",
+          "id": "facts",
           "valueType": "arrayObject",
           "type": "dynamic",
-          "key": "outputs",
-          "label": "并行处理结果",
+          "key": "facts",
+          "label": "事实",
           "description": ""
         },
         {
-          "id": "status",
-          "valueType": "string",
+          "id": "reviewWikiPatch",
+          "valueType": "object",
           "type": "dynamic",
-          "key": "status",
-          "label": "完成状态",
+          "key": "reviewWikiPatch",
+          "label": "Wiki Patch",
+          "description": ""
+        },
+        {
+          "id": "reviewWiki",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "reviewWiki",
+          "label": "更新后的 Wiki",
           "description": ""
         }
       ]
@@ -609,7 +659,7 @@
       "flowNodeType": "pluginOutput",
       "showStatus": false,
       "position": {
-        "x": 2220,
+        "x": 2060,
         "y": 0
       },
       "version": "481",
@@ -621,36 +671,55 @@
           "selectedTypeIndex": 0,
           "valueType": "arrayObject",
           "canEdit": true,
-          "key": "outputs",
-          "label": "并行处理结果",
+          "key": "facts",
+          "label": "事实",
           "description": "",
           "required": true,
           "value": [
-            "collectResults",
-            "outputs"
+            "assembleFacts",
+            "facts"
           ],
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "并行处理结果"
+          "toolDescription": "事实"
         },
         {
           "renderTypeList": [
             "reference"
           ],
           "selectedTypeIndex": 0,
-          "valueType": "string",
+          "valueType": "object",
           "canEdit": true,
-          "key": "status",
-          "label": "完成状态",
+          "key": "reviewWikiPatch",
+          "label": "Wiki Patch",
           "description": "",
           "required": true,
           "value": [
-            "collectResults",
-            "status"
+            "assembleFacts",
+            "reviewWikiPatch"
           ],
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "完成状态"
+          "toolDescription": "Wiki Patch"
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "object",
+          "canEdit": true,
+          "key": "reviewWiki",
+          "label": "更新后的 Wiki",
+          "description": "",
+          "required": true,
+          "value": [
+            "assembleFacts",
+            "reviewWiki"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "更新后的 Wiki"
         }
       ],
       "outputs": []
@@ -659,38 +728,38 @@
   "edges": [
     {
       "source": "pluginInput",
-      "target": "prepareItems",
+      "target": "prepareFactChunks",
       "sourceHandle": "pluginInput-source-right",
-      "targetHandle": "prepareItems-target-left"
+      "targetHandle": "prepareFactChunks-target-left"
     },
     {
-      "source": "prepareItems",
-      "target": "batchLoopSample",
-      "sourceHandle": "prepareItems-source-right",
-      "targetHandle": "batchLoopSample-target-left"
+      "source": "prepareFactChunks",
+      "target": "factBatchLoop",
+      "sourceHandle": "prepareFactChunks-source-right",
+      "targetHandle": "factBatchLoop-target-left"
     },
     {
-      "source": "loopStart",
-      "target": "loopBody",
-      "sourceHandle": "loopStart-source-right",
-      "targetHandle": "loopBody-target-left"
+      "source": "factLoopStart",
+      "target": "factLoopBody",
+      "sourceHandle": "factLoopStart-source-right",
+      "targetHandle": "factLoopBody-target-left"
     },
     {
-      "source": "loopBody",
-      "target": "loopEnd",
-      "sourceHandle": "loopBody-source-right",
-      "targetHandle": "loopEnd-target-left"
+      "source": "factLoopBody",
+      "target": "factLoopEnd",
+      "sourceHandle": "factLoopBody-source-right",
+      "targetHandle": "factLoopEnd-target-left"
     },
     {
-      "source": "batchLoopSample",
-      "target": "collectResults",
-      "sourceHandle": "batchLoopSample-source-right",
-      "targetHandle": "collectResults-target-left"
+      "source": "factBatchLoop",
+      "target": "assembleFacts",
+      "sourceHandle": "factBatchLoop-source-right",
+      "targetHandle": "assembleFacts-target-left"
     },
     {
-      "source": "collectResults",
+      "source": "assembleFacts",
       "target": "pluginOutput",
-      "sourceHandle": "collectResults-source-right",
+      "sourceHandle": "assembleFacts-source-right",
       "targetHandle": "pluginOutput-target-left"
     }
   ],

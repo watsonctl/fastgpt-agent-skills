@@ -20,6 +20,18 @@
 - Add flatten/merge logic after nested execution.
 - Prefer a single purpose per loop/parallel block.
 - Do not use parallel fan-out if the source logic actually depends on sequential evidence accumulation.
+- Treat `loop` / `parallelRun` as FastGPT nested containers, not ordinary parent nodes.
+- Instantiate from `assets/canonical-examples/` or a fresh target-instance export. Do not use legacy keys from old probes.
+- Current verified container keys:
+  - input array: `loopInputArray`
+  - child list: `childrenNodeIdList`
+  - layout: `nodeWidth`, `nodeHeight`, `loopNodeInputHeight`
+  - start child outputs: `loopStartInput`, `loopStartIndex`
+  - end child input: `loopEndInput`
+  - loop output: `loopArray`
+  - parallel inputs: `parallelRunMaxConcurrency`, `parallelRunMaxRetryTimes`
+  - parallel outputs: `parallelSuccessResults`, `parallelFullResults`, `parallelStatus`
+- Do not reference container-level legacy fields such as `currentItem`, `result`, `successResults`, `fullResults`, or `status`; body nodes must read current item/index from the `loopStart` child.
 
 ## FastGPT RAG caveat
 

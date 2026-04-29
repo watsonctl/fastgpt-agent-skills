@@ -21,9 +21,9 @@ name: fastgpt-workflow-debug
 - edge 断裂导致工作流提前终止
 - 从 FastGPT 平台导出的 JSON 需要离线修复再重新导入
 
-## 0. 前置：FastGPT 官方 JSON 合约速查
+## 0. 前置：FastGPT JSON 合约速查
 
-> 以下枚举和字段名直接来源于 FastGPT 官方仓库 `labring/FastGPT`，是唯一 ground truth。
+> 官方仓库和官方文档是语义参考；**目标 FastGPT 实例中成功导出/成功导入的 JSON 才是节点 UI schema 的 System of Record**。遇到 `loop` / `parallelRun` / `chatNode` / `pluginModule` 等高风险节点时，先对照 `../fastgpt-shared/assets/canonical-examples/`，不要按旧 probe 或记忆猜字段。
 
 ### 0.1 FlowNodeTypeEnum（节点类型）
 
@@ -216,10 +216,18 @@ handle 命名规范：`<nodeId>-source-right` / `<nodeId>-target-left`。
 - [ ] 输入/输出与被引用的工具工作流的 `pluginInput` / `pluginOutput` 匹配
 
 ### 2.6 loop / parallelRun（容器节点）
-- [ ] `childrenNodeIdList` 数组包含所有子节点的 nodeId
+- [ ] 先读取 `../fastgpt-shared/assets/canonical-examples/README.md` 和对应 canonical JSON；不要用旧 probe 直接修
+- [ ] `loop` / `parallelRun` 是嵌套容器，不是普通父节点
+- [ ] 容器 input 使用当前实例验证过的 key：`loopInputArray`、`childrenNodeIdList`、`nodeWidth`、`nodeHeight`、`loopNodeInputHeight`
+- [ ] `parallelRun` 额外使用 `parallelRunMaxConcurrency`、`parallelRunMaxRetryTimes`
+- [ ] `childrenNodeIdList` 数组包含所有子节点的 nodeId；node 顶层字段和 input value 要一致
 - [ ] 子节点的 `parentNodeId` 指向容器节点
-- [ ] loop 内有 `loopStart` + `loopEnd`
-- [ ] `loopInputArray` 引用有效
+- [ ] 容器内有且仅有一个 `loopStart` 和一个 `loopEnd`
+- [ ] 子流程从 `loopStart` 开始，body 节点通过 `["<loopStartId>", "loopStartInput"]` 取当前项，通过 `["<loopStartId>", "loopStartIndex"]` 取 index
+- [ ] body 输出进入 `loopEnd.loopEndInput`
+- [ ] 下游只引用 canonical 聚合输出：`loop.loopArray` 或 `parallelRun.parallelSuccessResults / parallelFullResults / parallelStatus`
+- [ ] 禁止使用当前实例已证伪/未验证的旧 key：`array`、`maxConcurrency`、`maxRetries`、`successResults`、`failedResults`、`fullResults`、`status`、容器级 `currentItem`
+- [ ] 如果本地 validator 通过但页面仍报“工作流校验失败”，以页面导入器为准，导出一个目标实例最小成功样例后再修 skill
 
 ## 3. 代码节点深度排错
 
@@ -408,6 +416,7 @@ code 字段的值本身在 JSON 字符串内，因此：
 | 工具调用不生效 | `pluginId` 仍是占位符 | 替换为真实 appId |
 | 主检索 limit 配错导致检索空/超慢 | 把 `datasetSearchNode.limit` 误当 token 预算或误设为 4000+ | 主检索按 chunk 上限校准，常用 quick=20 / standard=50 / deep=100；用 flowResponses 观察 quoteList 和耗时 |
 | limit 设为 4000+ 后后端过载或工作流工具返回空 | 把 limit 当 token budget；多任务 loop/parallel 叠加 datasetSearch | 立即降到 20~100，并检查 `candidateCount/generalQuotes` 是否恢复 |
+| `loop` / `parallelRun` 页面导入报“工作流校验失败” | 旧 probe 把容器当普通父节点，缺 `loopStart`，或使用 `array/currentItem/successResults` 等旧 key | 按 `canonical-examples` 重建容器：`loopInputArray + loopStart + body + loopEnd + canonical aggregate outputs` |
 | 变量引用 `{{$xxx.yyy$}}` 不替换 | 模板变量格式错误或 nodeId 不匹配 | 确认 nodeId 和 key 与上游一致 |
 | 循环不执行 | `loopInputArray` 引用为空或非数组 | 检查引用链路和类型 |
 

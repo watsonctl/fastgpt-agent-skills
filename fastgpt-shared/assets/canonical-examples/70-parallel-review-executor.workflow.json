@@ -3,7 +3,7 @@
     {
       "nodeId": "pluginConfig",
       "name": "系统配置",
-      "intro": "最小可导入样例：workflow tool + parallelRun。用于验证 FastGPT 并行运行节点结构。",
+      "intro": "并行执行审查项目；只输出 candidateIssues。",
       "avatar": "core/workflow/template/systemConfig",
       "flowNodeType": "pluginConfig",
       "showStatus": false,
@@ -18,7 +18,7 @@
     {
       "nodeId": "pluginInput",
       "name": "工具开始",
-      "intro": "可不传 items；未传时使用内置测试数组。",
+      "intro": "配置工作流工具输入参数。",
       "avatar": "core/workflow/template/workflowStart",
       "flowNodeType": "pluginInput",
       "showStatus": false,
@@ -33,32 +33,32 @@
             "reference"
           ],
           "selectedTypeIndex": 0,
-          "valueType": "arrayString",
+          "valueType": "arrayObject",
           "canEdit": true,
-          "key": "items",
-          "label": "items",
-          "description": "可选：待并行处理的字符串数组",
-          "required": false,
+          "key": "contextPackages",
+          "label": "contextPackages",
+          "description": "",
+          "required": true,
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "待并行处理的字符串数组"
+          "toolDescription": "contextPackages"
         }
       ],
       "outputs": [
         {
-          "id": "items",
-          "key": "items",
-          "label": "items",
+          "id": "contextPackages",
+          "key": "contextPackages",
+          "label": "contextPackages",
           "type": "hidden",
-          "valueType": "arrayString",
+          "valueType": "arrayObject",
           "description": ""
         }
       ]
     },
     {
-      "nodeId": "prepareItems",
-      "name": "准备并行数组",
-      "intro": "构造一个 arrayAny，供并行运行节点消费。",
+      "nodeId": "prepareContextPackageItems",
+      "name": "准备并行输入项",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
@@ -66,7 +66,7 @@
         "x": 420,
         "y": 0
       },
-      "version": "482",
+      "version": "481",
       "inputs": [
         {
           "key": "system_addInputParam",
@@ -102,22 +102,22 @@
           "toolDescription": ""
         },
         {
-          "key": "items",
-          "valueType": "arrayString",
-          "label": "items",
+          "key": "contextPackages",
+          "valueType": "arrayObject",
+          "label": "contextPackages",
           "renderTypeList": [
             "reference"
           ],
           "description": "",
           "canEdit": true,
-          "required": false,
+          "required": true,
           "editField": {
             "key": true,
             "valueType": true
           },
           "value": [
             "pluginInput",
-            "items"
+            "contextPackages"
           ]
         },
         {
@@ -134,7 +134,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function arr(value){\n  if (Array.isArray(value)) return value.filter(v => v !== undefined && v !== null && String(v).trim() !== '');\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s = value.trim();\n    if (!s) return [];\n    try { const parsed = JSON.parse(s); return Array.isArray(parsed) ? parsed : [s]; } catch { return [s]; }\n  }\n  return [value];\n}\n\nfunction main({ items }){\n  const input = arr(items);\n  const itemArray = input.length ? input : ['alpha', 'beta', 'gamma'];\n  return { itemArray };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction main({ contextPackages }){ return { contextPackageItems: arr(contextPackages).map(pkg=>JSON.stringify(pkg)) }; }"
         }
       ],
       "outputs": [
@@ -163,24 +163,24 @@
           "description": ""
         },
         {
-          "id": "itemArray",
-          "valueType": "arrayAny",
+          "id": "contextPackageItems",
+          "valueType": "arrayString",
           "type": "dynamic",
-          "key": "itemArray",
-          "label": "并行输入数组",
+          "key": "contextPackageItems",
+          "label": "上下文包JSON数组",
           "description": ""
         }
       ]
     },
     {
-      "nodeId": "parallelReviewSample",
+      "nodeId": "parallelReview",
       "name": "并行运行",
-      "intro": "官方结构：数组 + 最大并发数 + 重试次数 + 固定开始/结束锚点。",
+      "intro": "按 FastGPT 4.14.11+ 并行运行结构处理 contextPackages：loopInputArray + loopStart + loopEnd。",
       "avatar": "core/workflow/template/parallelRun",
       "flowNodeType": "parallelRun",
       "showStatus": true,
       "position": {
-        "x": 860,
+        "x": 820,
         "y": 0
       },
       "version": "4.14.11",
@@ -194,8 +194,8 @@
           "label": "数组",
           "required": true,
           "value": [
-            "prepareItems",
-            "itemArray"
+            "prepareContextPackageItems",
+            "contextPackageItems"
           ],
           "debugLabel": "",
           "toolDescription": ""
@@ -209,7 +209,7 @@
           "label": "最大并发数",
           "required": true,
           "min": 1,
-          "value": 3
+          "value": 5
         },
         {
           "key": "parallelRunMaxRetryTimes",
@@ -221,7 +221,7 @@
           "required": true,
           "min": 0,
           "max": 5,
-          "value": 1
+          "value": 3
         },
         {
           "key": "childrenNodeIdList",
@@ -232,7 +232,7 @@
           "label": "",
           "value": [
             "parallelStart",
-            "parallelBody",
+            "reviewBodyAi",
             "parallelEnd"
           ]
         },
@@ -292,7 +292,7 @@
       ],
       "childrenNodeIdList": [
         "parallelStart",
-        "parallelBody",
+        "reviewBodyAi",
         "parallelEnd"
       ]
     },
@@ -304,8 +304,8 @@
       "flowNodeType": "loopStart",
       "showStatus": false,
       "position": {
-        "x": 940,
-        "y": 340
+        "x": 900,
+        "y": 360
       },
       "version": "481",
       "inputs": [
@@ -346,18 +346,18 @@
           "description": ""
         }
       ],
-      "parentNodeId": "parallelReviewSample"
+      "parentNodeId": "parallelReview"
     },
     {
-      "nodeId": "parallelBody",
-      "name": "并行体-处理当前项",
-      "intro": "示例只做确定性处理：把当前项转为大写并封装为 JSON 字符串。",
+      "nodeId": "reviewBodyAi",
+      "name": "并行体-候选问题生成",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
       "position": {
-        "x": 1220,
-        "y": 340
+        "x": 1180,
+        "y": 360
       },
       "version": "482",
       "inputs": [
@@ -446,7 +446,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function main({ currentItem, index }){\n  const text = currentItem == null ? '' : String(currentItem);\n  return {\n    processed: JSON.stringify({\n      index,\n      input: currentItem,\n      output: text.toUpperCase(),\n      executorMode: 'parallelRun_sample_code_body'\n    })\n  };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction firstEvidence(pkg){\n  const ctx=asObj(pkg.context);\n  const facts=arr(ctx.facts);\n  const sourceMap=arr(ctx.sourceMap);\n  const f=facts[0] || {};\n  const s=sourceMap.find(x=>x.chunkId && x.chunkId===f.sourceChunkId) || sourceMap[0] || {};\n  if (!f.factId && !s.chunkId) return [];\n  return [{\n    evidenceId:f.factId || s.chunkId || 'manual_confirmation_required',\n    sourceChunkId:f.sourceChunkId || s.chunkId,\n    fileId:f.fileId || s.fileId,\n    fileName:s.fileName,\n    text:f.factText || s.excerpt || '需人工确认',\n    sourceBoundary:f.sourceBoundary || s.sourceBoundary || 'project_fact_only'\n  }];\n}\nfunction buildCandidate(pkg, check, index){\n  const item=asObj(pkg.reviewItem);\n  const evidence=firstEvidence(pkg);\n  const missingLike=/缺失|未提供|应包含|必须包含|required|missing/i.test(textOf(check.expectedContent));\n  return {\n    candidateId:`${pkg.packageId || 'PKG'}-CAND-${index+1}`,\n    title: check.expectedContent ? `需核查：${textOf(check.expectedContent).slice(0,40)}` : `需人工核查：${item.name || item.code || '审查项'}`,\n    issueName: check.expectedContent ? `需核查：${textOf(check.expectedContent).slice(0,40)}` : `需人工核查：${item.name || item.code || '审查项'}`,\n    issueType: missingLike ? 'missing_or_incomplete_content_candidate' : 'content_compliance_candidate',\n    riskHint:'medium',\n    riskLevel:'medium',\n    reviewResult:'需人工确认',\n    description: check.expectedContent || '当前目标 FastGPT 实例未证明支持 Parallel Run 内直接挂 AI Chat；本节点生成候选问题骨架并交由后续证据/合并/风险门禁处理。',\n    chapterLocation:'需人工确认',\n    remediation:'请结合 Review Wiki 事实、规则和原文证据人工确认。',\n    basis:[{basisId:check.sourceRuleId || 'manual_confirmation_required', text:check.expectedContent || '需人工确认'}],\n    evidence,\n    wikiTrace:[{wikiId:pkg.reviewWikiId, packageId:pkg.packageId, reviewItem:item.code || item.name, checkId:check.checkId || ''}],\n    absenceProof: missingLike ? {checkedScope:item.code || item.name || pkg.packageId, method:'expected_content_check', expectedContent:check.expectedContent || '', result:'requires_manual_confirmation'} : undefined,\n    sourceReviewItem:item.code || item.name || '',\n    manualConfirmationReason: evidence.length ? '候选问题需经 evidence_countercheck / issue_merge / risk_classification 硬门禁确认' : '缺少可自动绑定证据，需人工确认',\n    isFinalConclusion:false\n  };\n}\nfunction main({ currentItem, index }){\n  const pkg=asObj(currentItem);\n  const checks=arr(pkg.expectedContentChecks);\n  const candidates=(checks.length?checks:[{}]).slice(0,5).map((check,i)=>buildCandidate(pkg,check,i));\n  return { processed: JSON.stringify({ packageId:pkg.packageId, index, candidateIssues:candidates, degraded:true, requiresManualReview:true, executorMode:'parallel_code_body_import_safe', finalConclusionForbidden:true }) };\n}"
         }
       ],
       "outputs": [
@@ -479,11 +479,11 @@
           "valueType": "string",
           "type": "dynamic",
           "key": "processed",
-          "label": "处理结果JSON",
+          "label": "候选问题JSON",
           "description": ""
         }
       ],
-      "parentNodeId": "parallelReviewSample"
+      "parentNodeId": "parallelReview"
     },
     {
       "nodeId": "parallelEnd",
@@ -493,8 +493,8 @@
       "flowNodeType": "loopEnd",
       "showStatus": false,
       "position": {
-        "x": 1540,
-        "y": 340
+        "x": 1620,
+        "y": 360
       },
       "version": "481",
       "inputs": [
@@ -507,26 +507,26 @@
           "label": "",
           "required": true,
           "value": [
-            "parallelBody",
+            "reviewBodyAi",
             "processed"
           ]
         }
       ],
       "outputs": [],
-      "parentNodeId": "parallelReviewSample"
+      "parentNodeId": "parallelReview"
     },
     {
-      "nodeId": "collectResults",
-      "name": "汇总并行结果",
-      "intro": "解析并行成功结果，输出给工具调用方。",
+      "nodeId": "collectCandidates",
+      "name": "收集候选问题",
+      "intro": "确定性数据处理节点。",
       "avatar": "core/workflow/template/codeRun",
       "flowNodeType": "code",
       "showStatus": true,
       "position": {
-        "x": 1780,
+        "x": 1840,
         "y": 0
       },
-      "version": "482",
+      "version": "481",
       "inputs": [
         {
           "key": "system_addInputParam",
@@ -576,27 +576,8 @@
             "valueType": true
           },
           "value": [
-            "parallelReviewSample",
+            "parallelReview",
             "parallelSuccessResults"
-          ]
-        },
-        {
-          "key": "status",
-          "valueType": "string",
-          "label": "status",
-          "renderTypeList": [
-            "reference"
-          ],
-          "description": "",
-          "canEdit": true,
-          "required": true,
-          "editField": {
-            "key": true,
-            "valueType": true
-          },
-          "value": [
-            "parallelReviewSample",
-            "parallelStatus"
           ]
         },
         {
@@ -613,7 +594,7 @@
             "custom"
           ],
           "label": "",
-          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return { raw: String(value) }; }\n}\nfunction arr(value){ return Array.isArray(value) ? value : (value == null ? [] : [value]); }\nfunction main({ successResults, status }){\n  const outputs = arr(successResults).map(asObj);\n  return { outputs, status: status || 'unknown' };\n}"
+          "value": "function asObj(value){\n  if (!value) return {};\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(String(value)); } catch { return {}; }\n}\nfunction arr(value){\n  if (Array.isArray(value)) return value.filter(Boolean);\n  if (value == null) return [];\n  if (typeof value === 'string') {\n    const s=value.trim();\n    if (!s || s === 'null' || s === 'undefined') return [];\n    try { const parsed=JSON.parse(s); return Array.isArray(parsed) ? parsed.filter(Boolean) : [parsed]; } catch { return [s]; }\n  }\n  return [value];\n}\nfunction textOf(value){ return value == null ? '' : String(value); }\nfunction hash(s){ let h=0; const t=String(s||''); for(let i=0;i<t.length;i++){ h=(Math.imul(31,h)+t.charCodeAt(i))|0; } return Math.abs(h).toString(36); }\nfunction now(){ return new Date().toISOString(); }\n\nfunction normalizeRow(x){\n  const obj=asObj(x);\n  if (obj && obj.data) return asObj(obj.data);\n  if (obj && obj.output) return asObj(obj.output);\n  if (obj && obj.answerText) return asObj(obj.answerText);\n  if (obj && obj.processed) return asObj(obj.processed);\n  return obj;\n}\nfunction main({ successResults }){\n  const rows=arr(successResults).map(normalizeRow);\n  const candidateIssues=[];\n  rows.forEach((r,rowIndex)=>{\n    arr(r.candidateIssues).forEach((c,i)=>{\n      const riskLevel=c.riskLevel || c.riskHint || c.severityHint || 'medium';\n      candidateIssues.push({\n        ...c,\n        candidateId:c.candidateId || c.candidateIssueId || `PKG-${rowIndex+1}-CAND-${i+1}`,\n        issueName:c.issueName || c.title || '待人工确认问题',\n        riskLevel,\n        reviewResult:c.reviewResult || '需人工确认',\n        chapterLocation:c.chapterLocation || c.location || '需人工确认',\n        remediation:c.remediation || c.suggestion || '需人工确认',\n        basis:arr(c.basis).length?arr(c.basis):[{basisId:'manual_confirmation_required', text:'需人工确认'}],\n        manualConfirmationReason:c.manualConfirmationReason || (!arr(c.evidence).length ? '缺少可自动绑定证据，需人工确认' : ''),\n        sourceReviewItem:c.sourceReviewItem || c.reviewItem,\n        isFinalConclusion:false\n      });\n    });\n  });\n  return { candidateIssues, degraded:rows.some(r=>r.degraded), requiresManualReview:rows.some(r=>r.requiresManualReview), reviewExecutorPolicy:{outputs:'candidateIssues_only', finalConclusionForbidden:true, normalizedOutsideParallelRun:true} };\n}"
         }
       ],
       "outputs": [
@@ -642,19 +623,35 @@
           "description": ""
         },
         {
-          "id": "outputs",
+          "id": "candidateIssues",
           "valueType": "arrayObject",
           "type": "dynamic",
-          "key": "outputs",
-          "label": "并行处理结果",
+          "key": "candidateIssues",
+          "label": "候选问题",
           "description": ""
         },
         {
-          "id": "status",
-          "valueType": "string",
+          "id": "degraded",
+          "valueType": "boolean",
           "type": "dynamic",
-          "key": "status",
-          "label": "完成状态",
+          "key": "degraded",
+          "label": "降级",
+          "description": ""
+        },
+        {
+          "id": "requiresManualReview",
+          "valueType": "boolean",
+          "type": "dynamic",
+          "key": "requiresManualReview",
+          "label": "需要人工复核",
+          "description": ""
+        },
+        {
+          "id": "reviewExecutorPolicy",
+          "valueType": "object",
+          "type": "dynamic",
+          "key": "reviewExecutorPolicy",
+          "label": "执行器策略",
           "description": ""
         }
       ]
@@ -667,7 +664,7 @@
       "flowNodeType": "pluginOutput",
       "showStatus": false,
       "position": {
-        "x": 2220,
+        "x": 2400,
         "y": 0
       },
       "version": "481",
@@ -679,36 +676,74 @@
           "selectedTypeIndex": 0,
           "valueType": "arrayObject",
           "canEdit": true,
-          "key": "outputs",
-          "label": "并行处理结果",
+          "key": "candidateIssues",
+          "label": "候选问题",
           "description": "",
           "required": true,
           "value": [
-            "collectResults",
-            "outputs"
+            "collectCandidates",
+            "candidateIssues"
           ],
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "并行处理结果"
+          "toolDescription": "候选问题"
         },
         {
           "renderTypeList": [
             "reference"
           ],
           "selectedTypeIndex": 0,
-          "valueType": "string",
+          "valueType": "boolean",
           "canEdit": true,
-          "key": "status",
-          "label": "完成状态",
+          "key": "degraded",
+          "label": "降级",
           "description": "",
           "required": true,
           "value": [
-            "collectResults",
-            "status"
+            "collectCandidates",
+            "degraded"
           ],
           "valueDesc": "",
           "debugLabel": "",
-          "toolDescription": "完成状态"
+          "toolDescription": "降级"
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "boolean",
+          "canEdit": true,
+          "key": "requiresManualReview",
+          "label": "需要人工复核",
+          "description": "",
+          "required": true,
+          "value": [
+            "collectCandidates",
+            "requiresManualReview"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "需要人工复核"
+        },
+        {
+          "renderTypeList": [
+            "reference"
+          ],
+          "selectedTypeIndex": 0,
+          "valueType": "object",
+          "canEdit": true,
+          "key": "reviewExecutorPolicy",
+          "label": "执行器策略",
+          "description": "",
+          "required": true,
+          "value": [
+            "collectCandidates",
+            "reviewExecutorPolicy"
+          ],
+          "valueDesc": "",
+          "debugLabel": "",
+          "toolDescription": "执行器策略"
         }
       ],
       "outputs": []
@@ -717,38 +752,38 @@
   "edges": [
     {
       "source": "pluginInput",
-      "target": "prepareItems",
+      "target": "prepareContextPackageItems",
       "sourceHandle": "pluginInput-source-right",
-      "targetHandle": "prepareItems-target-left"
+      "targetHandle": "prepareContextPackageItems-target-left"
     },
     {
-      "source": "prepareItems",
-      "target": "parallelReviewSample",
-      "sourceHandle": "prepareItems-source-right",
-      "targetHandle": "parallelReviewSample-target-left"
+      "source": "prepareContextPackageItems",
+      "target": "parallelReview",
+      "sourceHandle": "prepareContextPackageItems-source-right",
+      "targetHandle": "parallelReview-target-left"
     },
     {
       "source": "parallelStart",
-      "target": "parallelBody",
+      "target": "reviewBodyAi",
       "sourceHandle": "parallelStart-source-right",
-      "targetHandle": "parallelBody-target-left"
+      "targetHandle": "reviewBodyAi-target-left"
     },
     {
-      "source": "parallelBody",
+      "source": "reviewBodyAi",
       "target": "parallelEnd",
-      "sourceHandle": "parallelBody-source-right",
+      "sourceHandle": "reviewBodyAi-source-right",
       "targetHandle": "parallelEnd-target-left"
     },
     {
-      "source": "parallelReviewSample",
-      "target": "collectResults",
-      "sourceHandle": "parallelReviewSample-source-right",
-      "targetHandle": "collectResults-target-left"
+      "source": "parallelReview",
+      "target": "collectCandidates",
+      "sourceHandle": "parallelReview-source-right",
+      "targetHandle": "collectCandidates-target-left"
     },
     {
-      "source": "collectResults",
+      "source": "collectCandidates",
       "target": "pluginOutput",
-      "sourceHandle": "collectResults-source-right",
+      "sourceHandle": "collectCandidates-source-right",
       "targetHandle": "pluginOutput-target-left"
     }
   ],

@@ -14,6 +14,22 @@ BLOCKER_PLACEHOLDERS = {"__FASTGPT_AI_MODEL__"}
 WORKFLOW_TOOL_PLACEHOLDER_PATTERN = re.compile(r"__(?:WFT|WORKFLOW_TOOL)_[A-Z0-9_]+__")
 DATASET_PLACEHOLDER_PATTERN = re.compile(r"__DATASET_[A-Z0-9_]+__")
 DASHBOARD_IMPORT_KEYS = {"nodes", "edges", "chatConfig"}
+CONTAINER_NODE_TYPES = {"loop", "parallelRun"}
+LOOP_FORBIDDEN_CONTAINER_KEYS = {"array", "maxLoopTimes", "result", "currentItem", "index", "output"}
+PARALLEL_FORBIDDEN_CONTAINER_KEYS = {
+    "array",
+    "maxConcurrency",
+    "maxRetries",
+    "successResults",
+    "failedResults",
+    "fullResults",
+    "status",
+    "currentItem",
+}
+LEGACY_REFERENCE_KEYS_BY_CONTAINER_TYPE = {
+    "loop": {"result", "currentItem", "index"},
+    "parallelRun": {"successResults", "failedResults", "fullResults", "status", "currentItem"},
+}
 
 
 def is_node_reference_value(value) -> bool:
@@ -137,6 +153,190 @@ def validate_code_node_runtime_inputs(nodes: list[dict]) -> tuple[list[str], lis
                     f"code node {node_id} has literal structured input {key}; "
                     "verify it is not static generation data better compiled into code"
                 )
+    return errors, warnings
+
+
+def input_by_key(node: dict) -> dict:
+    return {
+        item.get("key"): item
+        for item in node.get("inputs", [])
+        if isinstance(item, dict) and isinstance(item.get("key"), str)
+    }
+
+
+def output_keys(node: dict) -> set[str]:
+    return {
+        item.get("key")
+        for item in node.get("outputs", [])
+        if isinstance(item, dict) and isinstance(item.get("key"), str)
+    }
+
+
+def node_input_keys(node: dict) -> set[str]:
+    return set(input_by_key(node).keys())
+
+
+def children_from_input(node: dict) -> list[str]:
+    value = input_by_key(node).get("childrenNodeIdList", {}).get("value")
+    return value if isinstance(value, list) and all(isinstance(item, str) for item in value) else []
+
+
+def validate_loop_parallel_containers(nodes: list[dict], edges: list[dict]) -> tuple[list[str], list[str]]:
+    """Validate the current target-instance container contract.
+
+    This is intentionally stricter than basic node/edge existence checks because
+    dashboard import can reject loop/parallelRun JSON that looks graph-valid but
+    does not preserve FastGPT's nested container schema.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    node_by_id = {node.get("nodeId"): node for node in nodes if isinstance(node, dict)}
+    incoming: dict[str, list[dict]] = {}
+    outgoing: dict[str, list[dict]] = {}
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        incoming.setdefault(edge.get("target"), []).append(edge)
+        outgoing.setdefault(edge.get("source"), []).append(edge)
+
+    container_ids = {
+        node.get("nodeId")
+        for node in nodes
+        if isinstance(node, dict) and node.get("flowNodeType") in CONTAINER_NODE_TYPES
+    }
+
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("flowNodeType") not in CONTAINER_NODE_TYPES:
+            continue
+        node_id = node.get("nodeId") or "<unknown>"
+        node_type = node.get("flowNodeType")
+        keys = node_input_keys(node) | output_keys(node)
+
+        forbidden = LOOP_FORBIDDEN_CONTAINER_KEYS if node_type == "loop" else PARALLEL_FORBIDDEN_CONTAINER_KEYS
+        used_forbidden = sorted(keys & forbidden)
+        if used_forbidden:
+            errors.append(
+                f"{node_type} container {node_id} uses legacy/unverified keys: "
+                + ", ".join(used_forbidden)
+            )
+
+        required_inputs = {"loopInputArray", "childrenNodeIdList", "nodeWidth", "nodeHeight", "loopNodeInputHeight"}
+        if node_type == "parallelRun":
+            required_inputs |= {"parallelRunMaxConcurrency", "parallelRunMaxRetryTimes"}
+            required_outputs = {"parallelSuccessResults", "parallelFullResults", "parallelStatus"}
+        else:
+            required_outputs = {"loopArray"}
+        missing_inputs = sorted(required_inputs - node_input_keys(node))
+        missing_outputs = sorted(required_outputs - output_keys(node))
+        if missing_inputs:
+            errors.append(f"{node_type} container {node_id} missing canonical inputs: {', '.join(missing_inputs)}")
+        if missing_outputs:
+            errors.append(f"{node_type} container {node_id} missing canonical outputs: {', '.join(missing_outputs)}")
+
+        top_children = node.get("childrenNodeIdList")
+        if not isinstance(top_children, list):
+            errors.append(f"{node_type} container {node_id} missing top-level childrenNodeIdList")
+            top_children = []
+        input_children = children_from_input(node)
+        if not input_children:
+            errors.append(f"{node_type} container {node_id} missing input childrenNodeIdList value")
+        if input_children and top_children and input_children != top_children:
+            errors.append(f"{node_type} container {node_id} childrenNodeIdList mismatch between node field and input value")
+
+        child_ids = input_children or top_children
+        missing_children = [child_id for child_id in child_ids if child_id not in node_by_id]
+        if missing_children:
+            errors.append(f"{node_type} container {node_id} references missing children: {', '.join(missing_children)}")
+            continue
+
+        child_nodes = [node_by_id[child_id] for child_id in child_ids]
+        loop_starts = [child for child in child_nodes if child.get("flowNodeType") == "loopStart"]
+        loop_ends = [child for child in child_nodes if child.get("flowNodeType") == "loopEnd"]
+        if len(loop_starts) != 1:
+            errors.append(f"{node_type} container {node_id} must contain exactly one loopStart child")
+        if len(loop_ends) != 1:
+            errors.append(f"{node_type} container {node_id} must contain exactly one loopEnd child")
+
+        for child in child_nodes:
+            if child.get("parentNodeId") != node_id:
+                errors.append(
+                    f"{node_type} container {node_id} child {child.get('nodeId')} has parentNodeId={child.get('parentNodeId')}"
+                )
+
+        extra_parent_children = [
+            child.get("nodeId")
+            for child in nodes
+            if isinstance(child, dict) and child.get("parentNodeId") == node_id and child.get("nodeId") not in child_ids
+        ]
+        if extra_parent_children:
+            errors.append(
+                f"{node_type} container {node_id} has parent-linked children absent from childrenNodeIdList: "
+                + ", ".join(extra_parent_children)
+            )
+
+        if loop_starts:
+            start = loop_starts[0]
+            start_id = start.get("nodeId")
+            if {"loopStartInput", "loopStartIndex"} - output_keys(start):
+                errors.append(f"{node_type} container {node_id} loopStart child {start_id} missing loopStartInput/loopStartIndex outputs")
+            first_child_targets = [
+                edge.get("target")
+                for edge in outgoing.get(start_id, [])
+                if edge.get("target") in child_ids and edge.get("target") != start_id
+            ]
+            if not first_child_targets:
+                errors.append(f"{node_type} container {node_id} loopStart child {start_id} has no outgoing edge into the container body")
+
+        if loop_ends:
+            end = loop_ends[0]
+            end_id = end.get("nodeId")
+            if "loopEndInput" not in node_input_keys(end):
+                errors.append(f"{node_type} container {node_id} loopEnd child {end_id} missing loopEndInput input")
+            body_incoming = [
+                edge.get("source")
+                for edge in incoming.get(end_id, [])
+                if edge.get("source") in child_ids and edge.get("source") != end_id
+            ]
+            if not body_incoming:
+                errors.append(f"{node_type} container {node_id} loopEnd child {end_id} has no incoming edge from the container body")
+
+        # Current verified exports do not include an explicit container -> loopStart edge.
+        # They do, however, require the body chain to start at loopStart. Flag old
+        # container-source-bottom edges into arbitrary body nodes as invalid.
+        for edge in outgoing.get(node_id, []):
+            target = edge.get("target")
+            if target in child_ids and node_by_id.get(target, {}).get("flowNodeType") != "loopStart":
+                errors.append(
+                    f"{node_type} container {node_id} has legacy internal edge to {target}; "
+                    "body flow must start from the loopStart child"
+                )
+
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_id = node.get("nodeId") or "<unknown>"
+        for item in node.get("inputs", []):
+            if not isinstance(item, dict) or not is_node_reference_value(item.get("value")):
+                continue
+            source_id, source_key = item["value"]
+            if source_id not in container_ids:
+                continue
+            container = node_by_id.get(source_id, {})
+            legacy_keys = LEGACY_REFERENCE_KEYS_BY_CONTAINER_TYPE.get(container.get("flowNodeType"), set())
+            if source_key in legacy_keys:
+                errors.append(
+                    f"node {node_id} references legacy container field {source_id}.{source_key}; "
+                    "use loopStart anchors inside the container or canonical aggregate outputs outside it"
+                )
+
+    if (
+        not errors
+        and any(isinstance(node, dict) and node.get("flowNodeType") in CONTAINER_NODE_TYPES for node in nodes)
+    ):
+        warnings.append(
+            "Static container validation passed against bundled canonical contracts; "
+            "it is still not a substitute for target FastGPT dashboard import/export verification."
+        )
     return errors, warnings
 
 
@@ -301,6 +501,10 @@ def validate(workflow: dict, require_strings: list[str]) -> tuple[list[str], lis
     errors.extend(code_input_errors)
     warnings.extend(code_input_warnings)
 
+    container_errors, container_warnings = validate_loop_parallel_containers(nodes, edges)
+    errors.extend(container_errors)
+    warnings.extend(container_warnings)
+
     placeholder_errors, placeholder_warnings = validate_placeholders(workflow, nodes)
     errors.extend(placeholder_errors)
     warnings.extend(placeholder_warnings)
@@ -341,6 +545,10 @@ def main() -> int:
         "edgeCount": len(workflow.get("edges", [])) if isinstance(workflow, dict) else 0,
         "errors": errors,
         "warnings": warnings,
+        "importBoundary": (
+            "Static validator only. Dashboard import/export on the target FastGPT instance "
+            "remains the authority for node-specific UI schema."
+        ),
     }
 
     if args.json:
@@ -350,6 +558,7 @@ def main() -> int:
         print(f"valid: {result['valid']}")
         print(f"nodes: {result['nodeCount']}")
         print(f"edges: {result['edgeCount']}")
+        print(f"boundary: {result['importBoundary']}")
         if errors:
             print("errors:")
             for error in errors:

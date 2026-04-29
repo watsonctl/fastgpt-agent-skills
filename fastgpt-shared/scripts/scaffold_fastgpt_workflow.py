@@ -22,6 +22,187 @@ def make_edge(source, target):
     }
 
 
+def make_ref_input(key, value_type, value, label=None, required=True):
+    return {
+        "key": key,
+        "valueType": value_type,
+        "label": label or key,
+        "renderTypeList": ["reference"],
+        "description": "",
+        "canEdit": True,
+        "required": required,
+        "editField": {"key": True, "valueType": True},
+        "value": value,
+    }
+
+
+def make_code_node(node_id, name, x, y, code, inputs=None, outputs=None, parent=None):
+    node = make_node(
+        node_id,
+        name,
+        "code",
+        x,
+        y,
+        intro="Generated scaffold code node; replace code and outputs before production use.",
+        inputs=[
+            {
+                "key": "system_addInputParam",
+                "renderTypeList": ["addInputParam"],
+                "valueType": "dynamic",
+                "label": "",
+                "required": False,
+                "description": "Dynamic Input",
+                "editField": {"key": True, "valueType": True},
+            },
+            *(inputs or []),
+            {"key": "codeType", "renderTypeList": ["hidden"], "label": "", "value": "js"},
+            {"key": "code", "renderTypeList": ["custom"], "label": "", "value": code},
+        ],
+        outputs=[
+            {
+                "id": "system_addOutputParam",
+                "key": "system_addOutputParam",
+                "type": "dynamic",
+                "valueType": "dynamic",
+                "label": "",
+                "editField": {"key": True, "valueType": True},
+                "description": "Return object fields are available as dynamic outputs",
+            },
+            {"id": "system_rawResponse", "key": "system_rawResponse", "label": "Raw response", "valueType": "object", "type": "static"},
+            {"id": "error", "key": "error", "label": "Error", "valueType": "object", "type": "static"},
+            *(outputs or []),
+        ],
+    )
+    node["avatar"] = "/imgs/workflow/code.svg"
+    node["version"] = "482"
+    node["showStatus"] = True
+    if parent:
+        node["parentNodeId"] = parent
+    return node
+
+
+def make_loop_start(node_id, x, y, parent):
+    node = make_node(
+        node_id,
+        "开始",
+        "loopStart",
+        x,
+        y,
+        intro="Container-internal fixed start anchor. Do not replace with parent.currentItem references.",
+        inputs=[
+            {"key": "loopStartInput", "renderTypeList": ["hidden"], "valueType": "any", "label": "", "required": True, "value": ""},
+            {"key": "loopStartIndex", "renderTypeList": ["hidden"], "valueType": "number", "label": "数组元素索引"},
+        ],
+        outputs=[
+            {"id": "loopStartInput", "key": "loopStartInput", "label": "当前数组项", "type": "static", "valueType": "any", "description": ""},
+            {"id": "loopStartIndex", "key": "loopStartIndex", "label": "数组元素索引", "type": "static", "valueType": "number", "description": ""},
+        ],
+    )
+    node["avatar"] = "core/workflow/template/loopStart"
+    node["version"] = "481"
+    node["showStatus"] = False
+    node["parentNodeId"] = parent
+    return node
+
+
+def make_loop_end(node_id, x, y, parent, output_ref):
+    node = make_node(
+        node_id,
+        "结束",
+        "loopEnd",
+        x,
+        y,
+        intro="Container-internal fixed end anchor.",
+        inputs=[
+            {
+                "key": "loopEndInput",
+                "renderTypeList": ["reference"],
+                "valueType": "any",
+                "label": "",
+                "required": True,
+                "value": output_ref,
+            }
+        ],
+        outputs=[],
+    )
+    node["avatar"] = "core/workflow/template/loopEnd"
+    node["version"] = "481"
+    node["showStatus"] = False
+    node["parentNodeId"] = parent
+    return node
+
+
+def make_container(node_id, name, node_type, x, y, array_ref, children, concurrency=None, retries=None):
+    inputs = [
+        {
+            "key": "loopInputArray",
+            "renderTypeList": ["reference"],
+            "valueType": "arrayAny",
+            "label": "数组",
+            "required": True,
+            "value": array_ref,
+            "debugLabel": "",
+            "toolDescription": "",
+        }
+    ]
+    if node_type == "parallelRun":
+        inputs.extend(
+            [
+                {
+                    "key": "parallelRunMaxConcurrency",
+                    "renderTypeList": ["numberInput"],
+                    "valueType": "number",
+                    "label": "最大并发数",
+                    "required": True,
+                    "min": 1,
+                    "value": concurrency or 3,
+                },
+                {
+                    "key": "parallelRunMaxRetryTimes",
+                    "renderTypeList": ["numberInput"],
+                    "valueType": "number",
+                    "label": "单轮报错重试次数",
+                    "required": True,
+                    "min": 0,
+                    "max": 5,
+                    "value": retries if retries is not None else 1,
+                },
+            ]
+        )
+    inputs.extend(
+        [
+            {"key": "childrenNodeIdList", "renderTypeList": ["hidden"], "valueType": "arrayString", "label": "", "value": children},
+            {"key": "nodeWidth", "renderTypeList": ["hidden"], "valueType": "number", "label": "", "value": 900},
+            {"key": "nodeHeight", "renderTypeList": ["hidden"], "valueType": "number", "label": "", "value": 500},
+            {"key": "loopNodeInputHeight", "renderTypeList": ["hidden"], "valueType": "number", "label": "", "value": 320},
+        ]
+    )
+    outputs = (
+        [
+            {"id": "parallelSuccessResults", "valueType": "arrayAny", "type": "static", "key": "parallelSuccessResults", "label": "成功结果", "description": ""},
+            {"id": "parallelFullResults", "valueType": "arrayObject", "type": "static", "key": "parallelFullResults", "label": "完整结果", "description": ""},
+            {"id": "parallelStatus", "valueType": "string", "type": "static", "key": "parallelStatus", "label": "完成状态", "description": ""},
+        ]
+        if node_type == "parallelRun"
+        else [{"id": "loopArray", "valueType": "arrayAny", "type": "static", "key": "loopArray", "label": "循环结果", "description": ""}]
+    )
+    node = make_node(
+        node_id,
+        name,
+        node_type,
+        x,
+        y,
+        intro="Canonical container scaffold: loopInputArray + loopStart + loopEnd. Clone target exports for production.",
+        inputs=inputs,
+        outputs=outputs,
+    )
+    node["avatar"] = f"core/workflow/template/{node_type}"
+    node["version"] = "4.14.11" if node_type == "parallelRun" else "481"
+    node["showStatus"] = True
+    node["childrenNodeIdList"] = children
+    return node
+
+
 def make_node(node_id, name, node_type, x, y, intro="", inputs=None, outputs=None):
     return {
         "nodeId": node_id,
@@ -119,19 +300,85 @@ def main() -> int:
         last_node = "workflowToolRef"
         x += 520
     if "loop" in patterns:
-        nodes.append(make_node("loopNode", "批量运行占位", "loop", x, -620, "Replace with sequential item processing"))
-        nodes.append(make_node("loopStart", "循环开始", "loopStart", x + 520, -620))
-        nodes.append(make_node("loopEnd", "循环结束", "loopEnd", x + 1040, -620))
-        edges.append(make_edge(last_node, "loopNode"))
-        edges.append(make_edge("loopNode", "loopStart"))
-        edges.append(make_edge("loopStart", "loopEnd"))
-        last_node = "loopEnd"
+        prepare_id = "loopPrepareArray"
+        loop_id = "loopNode"
+        start_id = "loopStart"
+        body_id = "loopBody"
+        end_id = "loopEnd"
+        nodes.append(
+            make_code_node(
+                prepare_id,
+                "准备循环数组",
+                x,
+                -620,
+                "function main(){ return { itemArray: ['alpha', 'beta', 'gamma'] }; }",
+                outputs=[{"id": "itemArray", "key": "itemArray", "type": "dynamic", "valueType": "arrayAny", "label": "循环输入数组"}],
+            )
+        )
+        nodes.append(make_container(loop_id, "批量运行占位", "loop", x + 460, -620, [prepare_id, "itemArray"], [start_id, body_id, end_id]))
+        nodes.append(make_loop_start(start_id, x + 540, -280, loop_id))
+        nodes.append(
+            make_code_node(
+                body_id,
+                "循环体占位",
+                x + 820,
+                -280,
+                "function main({ currentItem, index }){ return { processed: JSON.stringify({ index, currentItem }) }; }",
+                inputs=[
+                    make_ref_input("currentItem", "any", [start_id, "loopStartInput"]),
+                    make_ref_input("index", "number", [start_id, "loopStartIndex"]),
+                ],
+                outputs=[{"id": "processed", "key": "processed", "type": "dynamic", "valueType": "string", "label": "处理结果JSON"}],
+                parent=loop_id,
+            )
+        )
+        nodes.append(make_loop_end(end_id, x + 1160, -280, loop_id, [body_id, "processed"]))
+        edges.append(make_edge(last_node, prepare_id))
+        edges.append(make_edge(prepare_id, loop_id))
+        edges.append(make_edge(start_id, body_id))
+        edges.append(make_edge(body_id, end_id))
+        last_node = loop_id
         x += 1560
     if "parallel" in patterns:
-        nodes.append(make_node("parallelRun", "并行执行占位", "parallelRun", x, -1180, "Replace with independent fan-out logic"))
-        edges.append(make_edge(last_node, "parallelRun"))
-        last_node = "parallelRun"
-        x += 520
+        prepare_id = "parallelPrepareArray"
+        parallel_id = "parallelRun"
+        start_id = "parallelStart"
+        body_id = "parallelBody"
+        end_id = "parallelEnd"
+        nodes.append(
+            make_code_node(
+                prepare_id,
+                "准备并行数组",
+                x,
+                -1180,
+                "function main(){ return { itemArray: ['alpha', 'beta', 'gamma'] }; }",
+                outputs=[{"id": "itemArray", "key": "itemArray", "type": "dynamic", "valueType": "arrayAny", "label": "并行输入数组"}],
+            )
+        )
+        nodes.append(make_container(parallel_id, "并行执行占位", "parallelRun", x + 460, -1180, [prepare_id, "itemArray"], [start_id, body_id, end_id]))
+        nodes.append(make_loop_start(start_id, x + 540, -840, parallel_id))
+        nodes.append(
+            make_code_node(
+                body_id,
+                "并行体占位",
+                x + 820,
+                -840,
+                "function main({ currentItem, index }){ return { processed: JSON.stringify({ index, currentItem }) }; }",
+                inputs=[
+                    make_ref_input("currentItem", "any", [start_id, "loopStartInput"]),
+                    make_ref_input("index", "number", [start_id, "loopStartIndex"]),
+                ],
+                outputs=[{"id": "processed", "key": "processed", "type": "dynamic", "valueType": "string", "label": "处理结果JSON"}],
+                parent=parallel_id,
+            )
+        )
+        nodes.append(make_loop_end(end_id, x + 1160, -840, parallel_id, [body_id, "processed"]))
+        edges.append(make_edge(last_node, prepare_id))
+        edges.append(make_edge(prepare_id, parallel_id))
+        edges.append(make_edge(start_id, body_id))
+        edges.append(make_edge(body_id, end_id))
+        last_node = parallel_id
+        x += 1560
 
     nodes.append(make_node("finalAnswer", "最终回答占位", "chatNode", x, 0, "Replace with final synthesis / fallback prompt"))
     edges.append(make_edge(last_node, "finalAnswer"))

@@ -7,6 +7,28 @@
 
 ---
 
+## 0. Schema source of record
+
+FastGPT workflow JSON must be generated from this evidence order:
+
+1. the user's current target-instance successful export/import;
+2. bundled import-verified canonical examples in `../canonical-examples/`;
+3. probe examples in this directory, only after confirming they match the target instance.
+
+Official documentation is useful semantic reference, but it does not replace the target instance's real dashboard import schema.
+
+High-risk container nodes (`loop`, `parallelRun`, `loopStart`, `loopEnd`) must be instantiated from canonical templates. Do not freely invent container input/output keys.
+
+Current bundled canonical examples:
+
+- `../canonical-examples/00-workflow-tool-parallelrun-sample.workflow.json`
+- `../canonical-examples/35-fact-extractor.workflow.json` — schema reference only; business logic is project-specific.
+- `../canonical-examples/70-parallel-review-executor.workflow.json` — schema reference only; business logic is project-specific.
+
+Probe examples are exploration aids. They are not production templates unless explicitly marked import-verified/canonical.
+
+---
+
 ## 1. 当前结论
 
 本探针包已形成两类基准：
@@ -150,6 +172,7 @@ call external business API
 
 - 验证批量处理 / 循环处理结构。
 - 适合测试数组输入、逐项处理、结果聚合。
+- 当前文件已按目标实例成功导入的 `loop` 容器结构重建：`loopInputArray + loopStart + loopEnd + loopArray`。
 
 适合production workflow中的位置：
 
@@ -162,8 +185,9 @@ per-rule validation
 
 注意：
 
-- 如果导入成功但运行异常，应优先导出当前实例手工创建的最小批处理工作流，再反推真实 schema。
+- 如果导入失败或运行异常，应优先导出当前实例手工创建的最小批处理工作流，再反推真实 schema。
 - 不建议在production workflow main path初版中大量依赖复杂循环；优先使用 Code Run 做稳定聚合。
+- 旧 key `array` / `currentItem` / `result` / `output` 不再作为当前实例生产模板依据。
 
 ---
 
@@ -175,6 +199,7 @@ per-rule validation
 
 - 验证并行执行节点结构。
 - 适合测试数组任务并发处理、结果收集和失败重试行为。
+- 当前文件与 canonical minimal `workflow tool + parallelRun` 样例保持一致：`loopInputArray + parallelRunMaxConcurrency + parallelRunMaxRetryTimes + loopStart + loopEnd + parallelSuccessResults`。
 
 适合production workflow中的位置：
 
@@ -189,6 +214,7 @@ generate candidate findings across multiple dimensions
 
 - 并行节点适合做“并发执行”，但final business output仍应经过后置汇总、证据检查和最终协议收口。
 - 不应让并行分支直接输出最终final user-facing report。
+- 旧 key `array` / `maxConcurrency` / `maxRetries` / `successResults` / `failedResults` / `fullResults` / `status` / 容器级 `currentItem` 不再作为当前实例生产模板依据。
 
 ---
 
@@ -851,4 +877,3 @@ pluginId: "<目标工具工作流 ID>"
 5. 文件、变量、知识库、HTTP、AI 输出都必须显式传递和校验
 6. Final business outputs should be closed by an explicit output contract rather than unconstrained agent free-form generation.
 ```
-
