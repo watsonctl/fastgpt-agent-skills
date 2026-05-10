@@ -4,7 +4,7 @@ metadata:
     github-path: fastgpt-workflow-debug
     github-ref: refs/heads/main
     github-repo: https://github.com/watsonctl/fastgpt-agent-skills
-    github-tree-sha: 0cebfd28ddee9bb44a44f66a323583ae73c33f22
+    github-tree-sha: c5da50c51fef0389c80d14b915a2d52f46423bf9
 name: fastgpt-workflow-debug
 ---
 # FastGPT Workflow Debug & Optimization
@@ -140,10 +140,11 @@ handle 命名规范：`<nodeId>-source-right` / `<nodeId>-target-left`。
 
 对目标 JSON 执行以下检查，**每一项必须报告 PASS / FAIL + 具体位置**：
 
-### 1.1 顶层结构
+### 1.1 顶层与通用校验
 - [ ] JSON 可解析，无语法错误
 - [ ] 存在 `nodes` 数组且非空
 - [ ] 存在 `edges` 数组
+- [ ] **[P0] 必需的 selectedTypeIndex**：对于任何 `renderTypeList.length > 1` 的输入参数，必须显式定义 `selectedTypeIndex`。否则引擎默认使用 index 0，若与 `value` 类型不符（如 index 0 是引用但 value 是字符串）会报“缺值”。
 - [ ] 如果是主工作流（非 pluginModule 工具），存在 `chatConfig` 对象
 - [ ] 如果是工具工作流，有 `pluginInput` + `pluginOutput` 节点
 
@@ -163,6 +164,8 @@ handle 命名规范：`<nodeId>-source-right` / `<nodeId>-target-left`。
 - [ ] 从 `workflowStart` 出发有可达路径到所有非配置节点
 - [ ] 无孤立节点（除 `userGuide` / `pluginConfig` 外）
 - [ ] 无自循环 edge
+- [ ] **[P1] 触发入度（In-Degree）校验**：常规节点（chatNode, code, etc.）通常只允许一个指向 `target-left` 的 Flow Edge。若存在多个 Flow Edges 指向同一个触发端口（常见于手动连线混乱），会导致“结构完整性”校验失败。
+- [ ] **[P1] 拓扑冗余校验**：避免“旁路触发”。如果 A -> B -> C 已经存在，则 A -> C 的 Flow Edge 通常是冗余的，会干扰 DAG 执行树的生成。
 
 ### 1.4 输入引用校验
 - [ ] `value: ["nodeId", "outputKey"]` 引用的 nodeId 存在
@@ -418,7 +421,8 @@ code 字段的值本身在 JSON 字符串内，因此：
 | limit 设为 4000+ 后后端过载或工作流工具返回空 | 把 limit 当 token budget；多任务 loop/parallel 叠加 datasetSearch | 立即降到 20~100，并检查 `candidateCount/generalQuotes` 是否恢复 |
 | `loop` / `parallelRun` 页面导入报“工作流校验失败” | 旧 probe 把容器当普通父节点，缺 `loopStart`，或使用 `array/currentItem/successResults` 等旧 key | 按 `canonical-examples` 重建容器：`loopInputArray + loopStart + body + loopEnd + canonical aggregate outputs` |
 | 变量引用 `{{$xxx.yyy$}}` 不替换 | 模板变量格式错误或 nodeId 不匹配 | 确认 nodeId 和 key 与上游一致 |
-| 循环不执行 | `loopInputArray` 引用为空或非数组 | 检查引用链路和类型 |
+| "M1-结构完整性" 红色警告 | 节点入度异常或必需参数 index 缺失 | 1. 删除所有冗余的 Flow Edges；2. 为所有 `renderTypeList.length > 1` 的参数补全 `selectedTypeIndex`（如 userChatInput: 1） |
+| 循环不执行 | `loopInputArray` 引用为空 or 非数组 | 检查引用链路和类型 |
 
 ## 6. 修复工作流程
 

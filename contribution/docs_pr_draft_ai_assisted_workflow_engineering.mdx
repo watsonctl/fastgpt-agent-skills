@@ -1,0 +1,142 @@
+# AI-assisted Workflow Development
+
+This guide describes how AI tools can help developers review, debug, and iterate on FastGPT workflows.
+
+It focuses on practical workflow engineering tasks such as checking node connections, reviewing variable mappings, debugging runtime behavior, and using detailed execution data to improve complex workflows.
+
+## Overview
+
+FastGPT provides visual workflow orchestration for building applications with models, knowledge bases, code nodes, conditional branches, and tool calls.
+
+As workflows become more complex, developers may use AI tools to help:
+
+- Draft workflow structures from product requirements
+- Review workflow JSON exported from FastGPT
+- Identify broken node connections or variable mappings
+- Analyze runtime diagnostics from test runs
+- Suggest fixes based on execution evidence
+
+AI tools should be treated as development assistants. Developers should still verify generated workflows in the FastGPT dashboard and test them before publishing.
+
+## Recommended Development Loop
+
+A practical AI-assisted workflow development loop is:
+
+1. **Draft**: Create or update a workflow using the FastGPT dashboard, exported configuration, or AI-assisted generation.
+2. **Review**: Check node IDs, edges, variable mappings, and tool input/output contracts.
+3. **Import and inspect**: Import the workflow into FastGPT and review it visually.
+4. **Run test cases**: Execute representative test inputs.
+5. **Inspect diagnostics**: Use detailed runtime data to locate failures.
+6. **Refine**: Patch the workflow and repeat the test cycle.
+
+At the moment, parts of this loop may still require manual dashboard operations.
+
+## Workflow Structure Basics
+
+A typical exported workflow configuration includes workflow nodes, edges, and application-level configuration such as chat settings.
+
+When reviewing or generating workflow configuration, pay special attention to:
+
+- Stable node IDs
+- Valid edge source and target IDs
+- Correct node input and output keys
+- Consistent variable names
+- Tool or workflow input/output alignment
+- Application-level settings that may affect runtime behavior
+
+> Important: When generating or patching workflow configuration, make sure node IDs and edge source/target IDs remain consistent. Broken edges are one of the most common causes of invalid or incomplete workflows.
+
+## Node-level Review Guidelines
+
+### AI chat nodes
+
+Check that the prompt, model settings, input variables, and expected output are aligned with the downstream nodes.
+
+### Code nodes
+
+For code nodes, verify that:
+
+- Required inputs are declared and passed correctly
+- The code is compatible with the runtime sandbox
+- The returned object structure matches the node outputs
+- Downstream nodes reference the correct output keys
+
+### Conditional branches
+
+For condition branches, verify that:
+
+- The condition input exists at runtime
+- The compared value type is correct
+- Each branch has a valid downstream edge
+- The fallback path is handled when no condition matches
+
+### Dataset search nodes
+
+For dataset search nodes, verify that:
+
+- The search query input is available
+- The selected knowledge base configuration is valid
+- Downstream prompts correctly consume the retrieved context
+- Test runs confirm whether retrieval results are available
+
+### Workflow tools and plugin modules
+
+For workflow tools or plugin-style calls, verify that:
+
+- The target tool or workflow binding is valid
+- Declared inputs match the caller node
+- Declared outputs match downstream expectations
+- Runtime diagnostics confirm that the tool call actually executed
+
+## Runtime Diagnostics
+
+When debugging complex workflows, static review is not enough. Developers should run test cases and inspect runtime diagnostics.
+
+When using the Chat API, detailed execution data can help identify where a workflow failed or produced unexpected output.
+
+Useful diagnostic information may include:
+
+- Node execution status
+- Runtime errors
+- Intermediate node outputs
+- Tool or plugin outputs
+- Retrieved knowledge base references
+- Final response content
+
+These diagnostics can be used as evidence for AI-assisted debugging. Instead of asking an AI tool to guess what went wrong, provide the relevant runtime details and ask it to locate the failing node, explain the cause, and propose a minimal patch.
+
+## Common Failure Patterns
+
+Common issues in AI-assisted workflow development include:
+
+- Broken edges after node IDs are changed
+- Downstream nodes referencing missing output keys
+- Code nodes returning a structure that does not match declared outputs
+- Conditional branches comparing values with the wrong type
+- Dataset search nodes receiving an empty or incorrect query
+- Tool calls where caller inputs do not match tool parameters
+- Workflows that pass visual inspection but fail during runtime tests
+
+## Suggested Practice
+
+For complex workflows, avoid generating a large workflow in one step.
+
+A safer approach is:
+
+1. Start with a minimal working workflow
+2. Add one capability at a time
+3. Test each capability with representative inputs
+4. Inspect runtime diagnostics after each change
+5. Keep a known-good version before making large changes
+
+This approach makes workflows easier to review, debug, and maintain.
+
+## Follow-up Examples
+
+Minimal importable workflow examples can be added in a separate follow-up PR. Useful examples may include:
+
+- Basic chat and answer flow
+- Code node input/output flow
+- Conditional branch flow
+- Dataset search flow
+- Workflow tool call flow

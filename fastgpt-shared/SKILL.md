@@ -62,7 +62,9 @@ Use scripts instead of rewriting diagnostics by hand.
 - Local maintenance source: `/home/maintainer/repos/agent-skills`.
 - GitHub publishing repo: `watsonctl/fastgpt-agent-skills`.
 - Published GitHub content must be materialized real files; do not publish external symlinks that point back to a maintainer's local `/home/maintainer/repos/agent-skills`.
+- `assets/golden-examples/` contains end-to-end verified production-grade workflow patterns.
 - `assets/canonical-examples/` contains dashboard-import verified JSON and is the bundled System of Record for high-risk node shapes when no fresher target export is available.
+- `assets/functional_nodes_library.json` is a comprehensive library of individual FastGPT functional nodes (Chat, Search, Extract, Classify, Tools) with their full input/output schemas.
 - `assets/probe-examples/` are exploration probes. They are not production templates unless their README marks them canonical/import-verified.
 
 ### Ordinary device: install the whole pack from GitHub
