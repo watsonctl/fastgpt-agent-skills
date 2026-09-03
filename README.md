@@ -4,11 +4,11 @@ This repository is the GitHub publishing repository for the FastGPT skill pack.
 
 ## Source of truth
 
-- Maintenance source: `/home/maintainer/repos/agent-skills`
-- Publishing repository: `/home/maintainer/repos/fastgpt-agent-skills`
+- The maintenance source lives in a maintainer-local repository and is not published here.
+- This repository is the public, materialized publishing target.
 - Remote: `https://github.com/watsonctl/fastgpt-agent-skills`
 
-The publishing repository must contain materialized real files. Do **not** commit external symlinks that point to a maintainer-local path such as `/home/maintainer/repos/agent-skills`; those links will break for other users after clone.
+This repository must contain materialized real files. Do **not** commit external symlinks that point to a maintainer-local path; those links will break for other users after clone.
 
 ## Publish sync
 

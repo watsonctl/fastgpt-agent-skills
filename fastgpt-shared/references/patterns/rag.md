@@ -60,7 +60,8 @@ Agent mapping:
 
 - Treat node success as necessary but insufficient: final acceptance is the user-facing business deliverable with evidence, traceability, and stable closure.
 - Preserve retrieval limits as semantic knobs, not arbitrary large numbers.
-- Do not treat workflow `datasetSearchNode.limit` as token budget. For example-rag-project-style RAG, start with quick≈20 / standard≈50 / deep≈100 chunks and verify with flowResponses; 4000+ is a high-risk overload/empty-output setting.
+- In FastGPT 4.14.7, treat workflow `datasetSearchNode.limit` as the single-search quote-token cap, not a chunk count. Calibrate it against the target model's `quoteMaxToken`, returned正文 coverage, prompt size, and latency; govern route count and final chunk count with separate caps.
+- Treat the parent native `quoteList` and the final model's evidence bundle as different contracts: keep the full parent list for FastGPT CITE authorization, then pass a deterministic 1-5 item `quoteQA` subset to the final model. Require real chunk/dataset/collection IDs, non-empty正文, in-scope route membership, non-failure status, and ID deduplication; suppress generic low-information/deprecated records unless historical status is requested, preserve native ranking, and fail closed when the route snapshot is empty or malformed. Fall back when no valid item remains. Never assume a non-empty quoteList is already a verified evidence bundle.
 - Do not let supporting/reference evidence impersonate primary target evidence.
 - Primary evidence selection must serve the business deliverable, not just lexical similarity. Add scenario-applicability signals before prompt-tuning: question object, action, constraint, and source scope should align. Penalize adjacent-but-wrong scenarios so they remain supporting at most.
 - Suppress low-information chunks such as TOC/index/preface/reference lists when the source system already does so.
@@ -73,3 +74,67 @@ Agent mapping:
 - Internal LLM nodes should be hidden from the user stream by default; final answer and explicit direct-answer branches are the normal exceptions.
 
 - Query expansion should be a small concept-family lexicon, not an ever-growing benchmark phrase list. Trigger by specific concept clusters and cap additions to 3-5 terms to avoid search drift.
+
+## Benchmark Testing Patterns
+
+These patterns support systematic RAG retrieval quality measurement, particularly for domain-specific knowledge bases (e.g., engineering standards / 工标).
+
+### Pure retrieval workflows (no LLM)
+
+For isolating retrieval quality from LLM generation, use a minimal three-node workflow:
+
+```
+workflowStart -> datasetSearchNode -> answerNode (outputs quoteQA directly)
+```
+
+This removes all LLM interference. The `answerNode` renders raw `quoteQA` and optionally `searchResult` for full inspection. Use this as the baseline harness before adding query analysis, reranking, or synthesis layers.
+
+### collectionId filtering
+
+Use `collectionIds` on `datasetSearchNode` to scope retrieval to specific documents (e.g., a single standard). This is distinct from `collectionFilterMatch` (tag-based filtering):
+
+- `collectionIds`: explicit list of collection IDs to search within. Use when you know exactly which documents contain the target content.
+- `collectionFilterMatch`: tag/attribute-based filtering. Use for dynamic or category-based scoping.
+
+For benchmark testing, `collectionIds` is preferred because it gives deterministic, reproducible scope.
+
+### Retrieval mode comparison matrix
+
+Test all combinations of search mode and reranking to find the optimal configuration for your domain:
+
+| searchMode | usingReRank | Behavior |
+|---|---|---|
+| `embedding` | `false` | Pure semantic vector search |
+| `embedding` | `true` | Semantic search + cross-encoder rerank |
+| `fullTextRecall` | `false` | Pure BM25 / Elasticsearch text match |
+| `fullTextRecall` | `true` | Text match + cross-encoder rerank |
+| `mixedRecall` | `false` | Hybrid (semantic + text) without rerank |
+| `mixedRecall` | `true` | Hybrid + cross-encoder rerank |
+
+Key metrics to collect per combination:
+- **Top-1 hit rate**: first result contains the correct answer
+- **Top-3 hit rate**: correct answer appears in top 3 results
+- **Retrieval time**: end-to-end latency of the search node
+
+For engineering standards, `mixedRecall` + `usingReRank: true` typically performs best because standard documents mix structured identifiers with natural language descriptions.
+
+### Standard number inference
+
+Most users ask questions without mentioning standard numbers (e.g., "what's the concrete curing requirement?" instead of "GB 50204 section 7.4"). Add an LLM node before retrieval to infer likely standard numbers from the question:
+
+- Input: user question
+- Output: array of candidate standard number strings (e.g., `["GB 50204", "GB/T 50080"]`)
+- Keep the candidate list small (2-5) to avoid search drift
+- Feed candidates into the search query construction step
+
+This is a `chatNode` or `code` node placed between `workflowStart` and `datasetSearchNode`.
+
+### Search query construction
+
+When standard numbers are inferred, prepend them to the search query for Elasticsearch exact matching priority:
+
+```
+query = f"{standard_number} {user_question}"
+```
+
+ES indexes standard numbers as high-priority exact-match tokens. Prepending them ensures that the retrieval engine first narrows to the correct document before semantic matching within it. This is a `code` node that takes both the inferred candidates and the original user question, then constructs the final search string passed to `datasetSearchNode.userChatInput`.

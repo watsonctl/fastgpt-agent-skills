@@ -232,6 +232,28 @@ def get_full_response_data(
     return data if isinstance(data, list) else []
 
 
+def build_ai_message_export(
+    record: dict[str, Any], flow_responses: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Project an AI record without losing persistent citation evidence.
+
+    ``getRecords_v2`` owns the persisted message fields, while
+    ``getResData`` owns the run-time response tree. Keep both representations
+    in the export. The presence flag distinguishes an actual empty
+    ``totalQuoteList`` from an older endpoint/export that did not return the
+    field at all.
+    """
+
+    return {
+        "dataId": record.get("dataId"),
+        "role": "AI",
+        "content": record.get("value", []),
+        "flowResponses": flow_responses,
+        "totalQuoteList": record.get("totalQuoteList"),
+        "totalQuoteListPresent": "totalQuoteList" in record,
+    }
+
+
 def resolve_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export FastGPT flowResponses / complete run logs for one app.")
     parser.add_argument("--base-url", default=os.getenv("FASTGPT_BASE_URL", ""))
@@ -315,14 +337,7 @@ def main() -> int:
                 data_id,
                 timeout=args.timeout,
             )
-            chat_row["messages"].append(
-                {
-                    "dataId": data_id,
-                    "role": "AI",
-                    "content": record.get("value", []),
-                    "flowResponses": flow_responses,
-                }
-            )
+            chat_row["messages"].append(build_ai_message_export(record, flow_responses))
         export_rows.append(chat_row)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

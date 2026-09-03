@@ -374,6 +374,224 @@ def validate_dashboard_import_shape(workflow: dict) -> list[str]:
     return errors
 
 
+ORPHAN_EXEMPT_TYPES = {"userGuide", "pluginConfig"}
+TEMPLATE_VAR_PATTERN = re.compile(r"\{\{\$([^.]+)\.([^$]+)\$\}\}")
+
+
+def validate_orphan_nodes(nodes: list[dict], edges: list[dict]) -> list[str]:
+    """Flag nodes not connected by any edge (except config nodes)."""
+    connected = set()
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        connected.add(edge.get("source"))
+        connected.add(edge.get("target"))
+    errors = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        nid = node.get("nodeId")
+        ntype = node.get("flowNodeType")
+        if nid and ntype not in ORPHAN_EXEMPT_TYPES and nid not in connected:
+            errors.append(f"Orphan node {nid} ({ntype}) has no connecting edges")
+    return errors
+
+
+def validate_chatnode_config(nodes: list[dict]) -> tuple[list[str], list[str]]:
+    """Validate chatNode configuration completeness."""
+    errors = []
+    warnings = []
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("flowNodeType") != "chatNode":
+            continue
+        nid = node.get("nodeId") or "<unknown>"
+        ibk = input_by_key(node)
+
+        # model must be non-empty
+        model_item = ibk.get("model")
+        if not model_item or not model_item.get("value"):
+            errors.append(f"chatNode {nid} missing model")
+
+        # systemPrompt must be non-empty
+        sp_item = ibk.get("systemPrompt")
+        if not sp_item or not sp_item.get("value"):
+            errors.append(f"chatNode {nid} missing systemPrompt")
+
+        # maxToken range check
+        mt_item = ibk.get("maxToken")
+        if mt_item and mt_item.get("value") is not None:
+            try:
+                mt = int(mt_item["value"])
+                if mt < 500 or mt > 32000:
+                    warnings.append(f"chatNode {nid} maxToken={mt} outside recommended 500-32000")
+            except (ValueError, TypeError):
+                pass
+
+        # temperature range check
+        temp_item = ibk.get("temperature")
+        if temp_item and temp_item.get("value") is not None:
+            try:
+                temp = float(temp_item["value"])
+                if temp < 0 or temp > 2:
+                    warnings.append(f"chatNode {nid} temperature={temp} outside 0-2")
+            except (ValueError, TypeError):
+                pass
+
+        # isResponseAnswerText must be boolean if present
+        irt = ibk.get("isResponseAnswerText")
+        if irt and not isinstance(irt.get("value"), bool):
+            warnings.append(f"chatNode {nid} isResponseAnswerText is not boolean: {irt.get('value')}")
+
+        # aiChatResponseFormat=json_schema requires aiChatJsonSchema
+        fmt_item = ibk.get("aiChatResponseFormat")
+        schema_item = ibk.get("aiChatJsonSchema")
+        if fmt_item and fmt_item.get("value") == "json_schema":
+            if not schema_item or not schema_item.get("value"):
+                errors.append(
+                    f"chatNode {nid} has aiChatResponseFormat=json_schema but missing aiChatJsonSchema"
+                )
+            # Model compatibility warning for json_schema
+            model_item = ibk.get("model")
+            model_val = model_item.get("value", "") if model_item else ""
+            known_supported = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
+            if model_val and not any(m in model_val for m in known_supported):
+                warnings.append(
+                    f"chatNode {nid} uses aiChatResponseFormat=json_schema with model '{model_val}' "
+                    f"which is not verified to support structured output. "
+                    f"Known supported: {known_supported}. "
+                    f"Consider using 'json_object' mode for non-OpenAI models."
+                )
+
+    return errors, warnings
+
+
+def validate_template_variables(nodes: list[dict]) -> list[str]:
+    """Validate {{$nodeId.field$}} template variable references in string inputs."""
+    node_ids = {n.get("nodeId") for n in nodes if isinstance(n, dict)}
+    output_keys_by_node: dict[str, set[str]] = {}
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        nid = node.get("nodeId")
+        if nid:
+            output_keys_by_node[nid] = output_keys(node)
+
+    errors = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        nid = node.get("nodeId") or "<unknown>"
+        for item in node.get("inputs", []):
+            if not isinstance(item, dict):
+                continue
+            val = item.get("value")
+            if not isinstance(val, str):
+                continue
+            for match in TEMPLATE_VAR_PATTERN.finditer(val):
+                ref_nid, ref_field = match.group(1), match.group(2)
+                if ref_nid not in node_ids:
+                    errors.append(
+                        f"node {nid} input {item.get('key')} references nonexistent node "
+                        f"${ref_nid}.{ref_field}$"
+                    )
+                elif ref_field not in output_keys_by_node.get(ref_nid, set()):
+                    errors.append(
+                        f"node {nid} input {item.get('key')} references nonexistent output "
+                        f"${ref_nid}.{ref_field}$"
+                    )
+    return errors
+
+
+def validate_ifelse_branches(nodes: list[dict], edges: list[dict]) -> tuple[list[str], list[str]]:
+    """Check that each ifElseNode branch has a corresponding outgoing edge."""
+    errors = []
+    warnings = []
+    outgoing_by_source: dict[str, list[str]] = {}
+    for edge in edges:
+        if not isinstance(edge, dict):
+            continue
+        src = edge.get("source")
+        handle = edge.get("sourceHandle", "")
+        if src:
+            outgoing_by_source.setdefault(src, []).append(handle)
+
+    VALID_CONDITIONS = {
+        "equalTo", "notEqual", "isEmpty", "isNotEmpty",
+        "greaterThan", "lessThan", "greaterThanOrEqualTo", "lessThanOrEqualTo",
+        "contain", "notContain", "startWith", "endWith", "reg",
+        "lengthEqualTo", "lengthNotEqualTo", "lengthGreaterThan",
+        "lengthGreaterThanOrEqualTo", "lengthLessThan", "lengthLessThanOrEqualTo",
+        "arrayContains",
+    }
+
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("flowNodeType") != "ifElseNode":
+            continue
+        nid = node.get("nodeId") or "<unknown>"
+        handles = outgoing_by_source.get(nid, [])
+
+        # Determine expected branches from ifElseList
+        ibk = input_by_key(node)
+        if_else_list = ibk.get("ifElseList", {}).get("value", [])
+        branch_count = len(if_else_list) if isinstance(if_else_list, list) else 0
+        if branch_count == 0:
+            warnings.append(f"ifElseNode {nid} has empty ifElseList")
+            continue
+
+        # Check condition enum values
+        for group in if_else_list:
+            if not isinstance(group, dict):
+                continue
+            for cond_item in group.get("list", []):
+                if not isinstance(cond_item, dict):
+                    continue
+                cond_val = cond_item.get("condition", "")
+                if cond_val and cond_val not in VALID_CONDITIONS:
+                    errors.append(
+                        f"ifElseNode {nid} has invalid condition '{cond_val}'; "
+                        f"expected camelCase enum (e.g. 'notEqual' not 'not_equals')"
+                    )
+
+        # Check IF branches (FastGPT uses "IF" for first branch, "IF0" rare but check both)
+        for i in range(branch_count):
+            expected_handle = f"{nid}-source-IF{i}" if i > 0 else f"{nid}-source-IF"
+            if not any(expected_handle in h for h in handles):
+                # Also check IF0 as fallback for first branch
+                if i == 0:
+                    fallback = f"{nid}-source-IF0"
+                    if any(fallback in h for h in handles):
+                        continue
+                warnings.append(f"ifElseNode {nid} missing edge for branch IF{i if i > 0 else ''}")
+
+        # Check ELSE branch
+        else_handle = f"{nid}-source-ELSE"
+        if not any(else_handle in h for h in handles):
+            warnings.append(f"ifElseNode {nid} missing edge for branch ELSE")
+
+    return errors, warnings
+
+
+def validate_selected_type_index(nodes: list[dict]) -> list[str]:
+    """Warn when renderTypeList.length > 1 but selectedTypeIndex is missing."""
+    warnings = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        nid = node.get("nodeId") or "<unknown>"
+        for item in node.get("inputs", []):
+            if not isinstance(item, dict):
+                continue
+            render_types = item.get("renderTypeList")
+            if not isinstance(render_types, list) or len(render_types) <= 1:
+                continue
+            if "selectedTypeIndex" not in item:
+                warnings.append(
+                    f"node {nid} input {item.get('key')} has renderTypeList with {len(render_types)} "
+                    f"options but missing selectedTypeIndex; engine defaults to index 0"
+                )
+    return warnings
+
+
 def validate_placeholders(workflow: dict, nodes: list[dict]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -449,6 +667,23 @@ def validate(workflow: dict, require_strings: list[str]) -> tuple[list[str], lis
             node_ids.add(node_id)
         if node_type not in ALLOWED_WORKFLOW_NODE_TYPES:
             errors.append(f"nodes[{index}] has unsupported flowNodeType: {node_type}")
+        if not isinstance(node.get("inputs"), list):
+            errors.append(f"nodes[{index}] inputs must be a list: {node_id or '<unknown>'}")
+        if not isinstance(node.get("outputs"), list):
+            errors.append(f"nodes[{index}] outputs must be a list: {node_id or '<unknown>'}")
+        for io_kind in ("inputs", "outputs"):
+            io_items = node.get(io_kind)
+            if not isinstance(io_items, list):
+                continue
+            # FastGPT 4.14.7 makes valueType optional, but an explicit JSON
+            # null does not satisfy z.enum(...).optional(). Omit editor-only
+            # valueType fields instead of serializing null.
+            for io_index, item in enumerate(io_items):
+                if isinstance(item, dict) and "valueType" in item and item["valueType"] is None:
+                    errors.append(
+                        f"nodes[{index}].{io_kind}[{io_index}] valueType must be omitted, not null: "
+                        f"{node_id or '<unknown>'}.{item.get('key') or item.get('id') or '<unknown>'}"
+                    )
 
     for key in chat_config:
         if key not in ALLOWED_CHATCONFIG_KEYS:
@@ -486,11 +721,23 @@ def validate(workflow: dict, require_strings: list[str]) -> tuple[list[str], lis
                 input_item = input_by_key.get(key)
                 if not input_item or "selectedTypeIndex" not in input_item:
                     continue
-                expected_index = expected_selected_type_index(input_item.get("value"))
-                if input_item.get("selectedTypeIndex") != expected_index:
+                actual_index = input_item.get("selectedTypeIndex")
+                value = input_item.get("value")
+                expected_index = expected_selected_type_index(value)
+                # selectedTypeIndex=1 with empty value is valid: chatConfig variable binding mode
+                if actual_index == 1 and isinstance(value, list) and len(value) == 0:
+                    continue
+                if actual_index != expected_index:
                     errors.append(
                         f"datasetSearchNode {key} selectedTypeIndex mismatch on {node_id}: "
-                        f"expected {expected_index}, got {input_item.get('selectedTypeIndex')}"
+                        f"expected {expected_index}, got {actual_index}"
+                    )
+                # Code node binding warning
+                if actual_index == 1 and isinstance(value, list) and len(value) == 2:
+                    warnings.append(
+                        f"node {node_id} input {key} uses selectedTypeIndex=1 with code node reference "
+                        f"{value}. This binding pattern is documented but not verified on the target instance. "
+                        f"If the UI shows empty '知识库变量引用', try manual binding or use chatConfig.variables approach."
                     )
 
     js_errors, js_warnings = validate_js_code_nodes(nodes)
@@ -508,6 +755,21 @@ def validate(workflow: dict, require_strings: list[str]) -> tuple[list[str], lis
     placeholder_errors, placeholder_warnings = validate_placeholders(workflow, nodes)
     errors.extend(placeholder_errors)
     warnings.extend(placeholder_warnings)
+
+    # --- New checks: orphan nodes, chatNode config, template vars, ifElse branches, selectedTypeIndex ---
+    errors.extend(validate_orphan_nodes(nodes, edges))
+
+    chatnode_errors, chatnode_warnings = validate_chatnode_config(nodes)
+    errors.extend(chatnode_errors)
+    warnings.extend(chatnode_warnings)
+
+    errors.extend(validate_template_variables(nodes))
+
+    ifelse_errors, ifelse_warnings = validate_ifelse_branches(nodes, edges)
+    errors.extend(ifelse_errors)
+    warnings.extend(ifelse_warnings)
+
+    warnings.extend(validate_selected_type_index(nodes))
 
     for index, edge in enumerate(edges):
         if not isinstance(edge, dict):

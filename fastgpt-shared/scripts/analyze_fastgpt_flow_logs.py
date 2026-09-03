@@ -114,6 +114,38 @@ def quote_ids(quotes: Any) -> set[str]:
     }
 
 
+def persistent_citation_diagnostics(message: dict[str, Any], cite_ids: list[str]) -> dict[str, Any]:
+    """Compare final-text CITE ids with the persisted message quote list.
+
+    Older exports did not include ``totalQuoteList`` at all. Treat that as
+    unavailable evidence rather than as an observed empty list.
+    """
+
+    total_quote_list_present = (
+        bool(message["totalQuoteListPresent"])
+        if "totalQuoteListPresent" in message
+        else "totalQuoteList" in message
+    )
+    total_quote_list = message.get("totalQuoteList")
+    total_quote_ids = quote_ids(total_quote_list)
+    cite_id_set = set(cite_ids)
+    matching_cite_ids = sorted(cite_id_set & total_quote_ids)
+    missing_cite_ids = sorted(cite_id_set - total_quote_ids)
+
+    return {
+        "totalQuoteListPresent": total_quote_list_present,
+        "totalQuoteListCount": count_non_empty_items(total_quote_list),
+        "totalQuoteListIds": sorted(total_quote_ids),
+        "citeIdsMatchingTotalQuoteListCount": len(matching_cite_ids),
+        "citeIdsMissingFromTotalQuoteList": missing_cite_ids,
+        "frontendCitationAuthorized": (
+            None
+            if not total_quote_list_present
+            else bool(cite_ids) and not missing_cite_ids
+        ),
+    }
+
+
 STANDARD_REF_RE = re.compile(
     r"(?i)([A-Z]{1,6}\s*[\/\\-]?\s*[A-Z]{0,6}|GB\/T|GBT|GB|GBJ|GBZ|DL\/T|DLT|DL|NB\/T|NBT|NB|JGJ|JG|CJJ|CJ|SH|HG|SY|YD|SL|MT|KA|DZ|JT|JTG|YB|TD|CH|JC|JB)\s*[-\s]*\d{1,7}"
 )
@@ -288,6 +320,7 @@ def summarize_message(chat: dict[str, Any], message: dict[str, Any]) -> dict[str
             anomalies.append(f"tool_issue:{tool.get('moduleName')}:{','.join(flags)}")
 
     cite_ids = extract_cite_ids(message)
+    persistent_citation = persistent_citation_diagnostics(message, cite_ids)
     final_quote_qa = final_context_outputs.get("finalQuoteQA") or []
     final_quote_collections = quote_collection_ids(final_quote_qa)
     final_quote_ids = quote_ids(final_quote_qa)
@@ -296,7 +329,8 @@ def summarize_message(chat: dict[str, Any], message: dict[str, Any]) -> dict[str
     top_level_quote_ids = set().union(*(quote_ids(items) for items in top_level_quote_lists)) if top_level_quote_lists else set()
     uncovered_collections = sorted(final_quote_collections - top_level_collection_ids)
     native_citation_risk = bool(cite_ids) and (
-        not native_dataset_searches or bool(uncovered_collections)
+        persistent_citation["frontendCitationAuthorized"] is not True
+        and (not native_dataset_searches or bool(uncovered_collections))
     )
     if not cite_ids and (
         final_quote_ids
@@ -305,7 +339,11 @@ def summarize_message(chat: dict[str, Any], message: dict[str, Any]) -> dict[str
         anomalies.append(
             "final_answer_missing_cite_markers: quoteList/finalQuoteQA exists but final text has no [24hex](CITE)"
         )
-    if cite_ids and not native_dataset_searches:
+    if (
+        cite_ids
+        and not native_dataset_searches
+        and persistent_citation["frontendCitationAuthorized"] is not True
+    ):
         anomalies.append("native_citation_auth_chain_missing: final answer has CITE ids but main-workflow flowResponses has no datasetSearchNode.quoteList")
     elif uncovered_collections:
         anomalies.append(
@@ -359,6 +397,7 @@ def summarize_message(chat: dict[str, Any], message: dict[str, Any]) -> dict[str
         "citation": {
             "citeIds": cite_ids,
             "citeIdCount": len(cite_ids),
+            **persistent_citation,
             "finalQuoteIds": sorted(final_quote_ids),
             "finalQuoteCollectionIds": sorted(final_quote_collections),
             "topLevelDatasetSearchCount": len(native_dataset_searches),
@@ -411,6 +450,10 @@ def render_text(path: Path, summaries: list[dict[str, Any]]) -> str:
                 f"- runtime.stoppedAt: {item['runtime']['stoppedAt']}",
                 f"- citation.nativeCitationRisk: {str(item['citation']['nativeCitationRisk']).lower()}",
                 f"- citation.citeIdCount: {item['citation']['citeIdCount']}",
+                f"- citation.totalQuoteListPresent: {str(item['citation']['totalQuoteListPresent']).lower()}",
+                f"- citation.totalQuoteListCount: {item['citation']['totalQuoteListCount']}",
+                f"- citation.citeIdsMatchingTotalQuoteListCount: {item['citation']['citeIdsMatchingTotalQuoteListCount']}",
+                f"- citation.frontendCitationAuthorized: {item['citation']['frontendCitationAuthorized']}",
                 f"- citation.topLevelDatasetSearchCount: {item['citation']['topLevelDatasetSearchCount']}",
                 f"- citation.topLevelQuoteCount: {item['citation']['topLevelQuoteCount']}",
                 f"- citation.finalQuoteCollectionIds: {json.dumps(item['citation']['finalQuoteCollectionIds'], ensure_ascii=False)}",

@@ -9,6 +9,7 @@ Use them as schema references before generating high-risk workflow JSON. Do not 
 - `00-workflow-tool-parallelrun-sample.workflow.json` — canonical minimal `workflow tool + parallelRun` example. Use this as the primary template for `parallelRun` container shape.
 - `35-fact-extractor.workflow.json` — canonical imported example for a workflow-tool `loop` / batch container. Treat the business prompt/code as project-specific; use only the container schema and wiring as a reference.
 - `70-parallel-review-executor.workflow.json` — canonical imported example for a workflow-tool `parallelRun` container in a larger review chain. Treat the business prompt/code as project-specific; use only the container schema and wiring as a reference.
+- `dataset-search-dynamic-select.workflow.json` — canonical `datasetSearchNode` with dynamic dataset selection via `chatConfig.variables` `selectDataset` type. Use as schema reference for: `selectedTypeIndex`, `selectDataset` variable binding, `datasetSearchUsingExtensionQuery`, and production search parameters.
 
 ## Container schema rule
 

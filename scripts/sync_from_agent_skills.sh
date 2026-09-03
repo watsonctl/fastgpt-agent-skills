@@ -3,18 +3,18 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/sync_from_agent_skills.sh [--source PATH] [--dry-run]
+Usage: scripts/sync_from_agent_skills.sh --source PATH [--dry-run]
 
 Materialize the FastGPT skill pack from the local maintenance source into this
 GitHub publishing repository. This script intentionally copies real files rather
 than committing external symlinks.
 
-Defaults:
-  --source /home/maintainer/repos/agent-skills
+Required:
+  --source PATH  maintainer-local path to the maintenance source repository
 USAGE
 }
 
-SOURCE_ROOT="/home/maintainer/repos/agent-skills"
+SOURCE_ROOT=""
 DRY_RUN=0
 
 while [[ $# -gt 0 ]]; do

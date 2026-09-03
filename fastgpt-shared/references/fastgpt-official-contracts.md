@@ -19,6 +19,13 @@ _Last refreshed: 2026-04-28_
 - Parallel Run: https://doc.fastgpt.io/zh-CN/docs/introduction/guide/dashboard/workflow/parallel_run
 - System tool `.pkg` upload, only for root-installed system tools: https://doc.fastgpt.io/docs/introduction/guide/plugins/upload_system_tool
 
+## Target-version gate
+
+- This file is a versioned baseline, not a claim that every item has been revalidated on the current target.
+- The current project target is FastGPT `4.15.0-beta5`; the `4.14.x` notes below are historical/compatibility evidence unless a current target export or official source confirms the same behavior.
+- Before generating, importing, debugging, or publishing, record the target version and compare the current detail/export, runtime trace, and relevant official source. If they disagree, stop at a version/schema diff instead of silently applying the older contract.
+- No beta5-specific runtime behavior is asserted here unless it is directly marked as target evidence; in particular, static node success does not prove AgentV2 VM dependency loading, persistence, or CITE projection.
+
 ## Import/export baseline
 
 FastGPT has three related JSON shapes that must not be mixed:
@@ -38,6 +45,16 @@ Dashboard importable workflow files must use this top-level shape and no wrapper
 ```
 
 Workflow tools use the same top-level dashboard shape. FastGPT identifies a workflow tool when the workflow contains `pluginInput` and `pluginOutput` nodes. Main workflows reference workflow tools through `pluginModule` nodes whose runtime field is still `pluginId` in current source.
+
+For FastGPT 4.14.7, the stored-node schema requires every item in `nodes`/`modules` to contain
+both `inputs` and `outputs` arrays. This is a storage-schema requirement, not merely a UI hint:
+an output-less terminal node must still carry `"outputs": []`. Do not treat a missing property as
+an empty array during validation.
+
+The same schema makes an IO item's `valueType` optional, not nullable. Follow the target template
+when it supplies a type; in FastGPT 4.14.7 the code-node template declares editor-only `codeType`
+and `code` as `"string"`. Never write `"valueType": null`; it can fail the dashboard create/import
+boundary with only the generic `Data validation error` message.
 
 OpenAPI create payloads may contain app metadata or wrapper fields such as `name`, `type`, `modules`, or `workflow`; those payloads are for API calls, not for page import. Template wrappers may contain top-level `template`; those are development artifacts, not user import packages. When preparing a user-facing import bundle, unwrap or regenerate them so each import file has only top-level `nodes`, `edges`, and `chatConfig`.
 
@@ -77,6 +94,50 @@ If a migration requires more node types, expand this baseline only after checkin
 - `chatInputGuide`
 - `fileSelectConfig`
 - `instruction`
+
+## chatNode: JSON output modes
+
+chatNode supports structured JSON output via `aiChatResponseFormat` and `aiChatJsonSchema` inputs.
+
+| aiChatResponseFormat | Mode | aiChatJsonSchema | Behavior |
+|---|---|---|---|
+| `""` (empty/default) | Plain text | ignored | Model returns free-form text |
+| `"json_object"` | JSON mode | ignored | Model returns valid JSON (no schema enforcement) |
+| `"json_schema"` | Structured output | JSON Schema string | Model returns JSON matching the exact schema |
+
+**Model compatibility:**
+- `"json_object"`: supported by OpenAI, DeepSeek, Qwen, and most OpenAI-compatible APIs
+- `"json_schema"`: only verified on OpenAI models (gpt-4o-mini, gpt-4o). DeepSeek v3 does NOT support this mode — FastGPT will send `schema: None` and the API returns 400.
+
+**When to use which:**
+- Use `"json_object"` for most cases — combine with a system prompt that specifies the expected JSON structure
+- Use `"json_schema"` only when the target model is verified to support it AND strict schema enforcement is needed
+- For intent classification / routing, `"json_object"` is sufficient since the code node validates the output
+
+**Probe example:** `assets/probe-examples/09_ai_chat_json_output_example.json` (uses gpt-4o-mini)
+
+## datasetSearchNode: selectedTypeIndex and dynamic dataset selection
+
+The `datasets` input on `datasetSearchNode` supports two modes controlled by `selectedTypeIndex`:
+
+| selectedTypeIndex | Mode | datasets.value | Use case |
+|---|---|---|---|
+| 0 (default) | **Static** | `[{datasetId: "xxx"}, ...]` | Hardcoded dataset list in workflow JSON |
+| 1 | **Reference** | `["nodeId", "outputKey"]` or bound to `chatConfig.variables` | Dynamic selection from upstream node or user variable |
+
+When using mode 1 with a `chatConfig.variables` entry of type `selectDataset`, the FastGPT UI presents a dataset picker to the user at runtime. The selected datasetIds are passed to the `datasetSearchNode` automatically.
+
+When using mode 1 with an upstream `code` node reference, the code node must return `[{datasetId: "xxx"}]` format. The code node output should use `valueType: "selectDataset"` (not `"arrayObject"`) to match the datasetSearchNode input type.
+
+**Known limitation**: The code node → datasetSearchNode reference binding (`selectedTypeIndex: 1` with `value: ["codeNodeId", "datasets"]`) is documented in the contract but has no verified export example. The FastGPT UI may show "知识库变量引用" as empty even when the JSON reference is correct. If the binding doesn't resolve at runtime, use `chatConfig.variables` with `selectDataset` type as fallback (see canonical example), or manually bind the reference in the UI after import.
+
+Canonical example (chatConfig.variables approach): `assets/canonical-examples/dataset-search-dynamic-select.workflow.json`
+
+Other production parameters observed in target-instance exports:
+- `datasetSearchUsingExtensionQuery: true` — enables query expansion via LLM before search
+- `datasetSearchExtensionModel: "qwen3.5-flash"` — model for query expansion
+- `limit: 20000` — an observed high quote-token cap, not a chunk count; keep it only when it is below the target model's `quoteMaxToken` and latency budget. Do not copy this value as a universal default.
+- `rerankModel: "jina-reranker-v2-base-multilingual"` — alternative to `bge-reranker-v2-m3`
 
 ## Migration defaults
 

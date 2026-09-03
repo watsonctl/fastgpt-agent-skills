@@ -92,7 +92,7 @@ tools              — toolCall
 | 代码类型 | `codeType` | `js` 或 `py` |
 | 数据集选择 | `datasets` | 知识库选择列表；`selectDataset` 只应出现在 `renderTypeList/valueType`，不要作为运行时 input key |
 | 相似度 | `similarity` | 检索相似度阈值 |
-| 检索数量 | `limit` | observed in tested FastGPT instances 中应按 chunk 数量/检索上限治理；主检索建议 quick≈20、standard≈50、deep≈100，禁止误设 4000+ |
+| 引用 token 上限 | `limit` | FastGPT 4.14.7 中表示单次知识库搜索返回引用正文的最大 token 数，不是 chunk 数，也不是候选规范数；chunk/路由数量必须单独设上限 |
 | 搜索模式 | `searchMode` | `embedding` / `fullTextRecall` / `mixedRecall` |
 | ReRank | `usingReRank` | 是否启用重排序 |
 | 条件判断 | `ifElseList` | ifElse 条件列表 |
@@ -218,7 +218,7 @@ handle 命名规范：`<nodeId>-source-right` / `<nodeId>-target-left`。
 - [ ] 当前官方运行时参数 key 必须是 `datasets`；发现旧 key `selectDataset` 时要判为 P1，因为 dispatch 会按 `datasets=[]` 处理
 - [ ] `datasets` 的 `selectedTypeIndex` 必须与值形态一致：静态数组 `[{ datasetId }]` 用 `0`，节点引用 `["nodeId", "outputKey"]` 用 `1`；否则 UI 会切到错误模式并报“选择引用变量”。
 - [ ] `collectionFilterMatch` 同样遵守值形态：静态空字符串/静态 JSON 用 `selectedTypeIndex: 0`，节点引用才用 `1`。
-- [ ] `limit` 不得被当成 token 预算。主检索通常控制在 20~100 chunk；引用授权单 collection 小检索可单独校准，但禁止 4000+ 暴力值
+- [ ] `limit` 按目标实例的引用 token 上限校准；它不是 chunk 数。`limit` 应低于或不超过目标模型的 `quoteMaxToken`，并通过 `flowResponses` 观察正文覆盖、最终提示长度和耗时；候选规范数、路由数、最终 chunk 数另设预算，不能用 `limit` 代替
 - [ ] `searchMode` 值合法：`embedding` / `fullTextRecall` / `mixedRecall`
 - [ ] `similarity` 在 0~1 范围
 - [ ] `userChatInput` 引用有效
@@ -464,8 +464,8 @@ FastGPT 页面能导入、运行约 1~3 秒后直接返回空值时，不要先�
 | ifElse 始终走 ELSE | `variable` 引用的值为 undefined | 检查上游节点是否正确输出该字段 |
 | 工具调用不生效 | `pluginId` 仍是占位符 | 替换为真实 appId |
 | 导入成功但约 1~3 秒空返回 | code node JS 编译失败、模型占位符、工具 AppId 占位符或最终出口未收口 | 先编译所有 code 节点，再查 `__FASTGPT_AI_MODEL__` / `pluginModule.pluginId` / `flowResponses` 最后节点 |
-| 主检索 limit 配错导致检索空/超慢 | 把 `datasetSearchNode.limit` 误当 token 预算或误设为 4000+ | 主检索按 chunk 上限校准，常用 quick=20 / standard=50 / deep=100；用 flowResponses 观察 quoteList 和耗时 |
-| limit 设为 4000+ 后后端过载或工作流工具返回空 | 把 limit 当 token budget；多任务 loop/parallel 叠加 datasetSearch | 立即降到 20~100，并检查 `candidateCount/generalQuotes` 是否恢复 |
+| 主检索 `limit` 配错导致正文不足或超慢 | 把 `datasetSearchNode.limit` 当成 chunk 数，或没有按目标模型 `quoteMaxToken` 校准 | 按“引用 token 上限”校准；用 `flowResponses` 对比 `quoteList` 正文覆盖、最终提示长度和耗时，并把 chunk/路由预算单独治理 |
+| 多任务检索把引用 token 预算放大 | 每个 loop/parallel 分支都使用过大的 token cap，累计上下文超过模型或耗时预算 | 先限制首轮任务数和路由数，再为每次 dataset search 设可解释的 token cap；不能用调小 `limit` 伪装成 chunk 限制 |
 | 变量引用 `{{$xxx.yyy$}}` 不替换 | 模板变量格式错误或 nodeId 不匹配 | 确认 nodeId 和 key 与上游一致 |
 | 循环不执行 | `loopInputArray` 引用为空或非数组 | 检查引用链路和类型 |
 
@@ -514,11 +514,13 @@ FastGPT 的引用弹窗和“全部引用/查看全文”不只看最终回答�
 2. 查看 `citation.nativeCitationRisk`：
    - `true` = 有 CITE 但顶层 datasetSearch 引用登记缺失或 collection 未覆盖。
    - `false` = 原生引用权限链大概率已覆盖，若仍失败再查 FastGPT 数据集/分享权限。
-3. 如果检索被封装在 workflow tool/pluginModule 内，主工作流最终作答前需要主工作流内的 `datasetSearchNode` 做引用授权检索：
+3. 如果检索被封装在 workflow tool/pluginModule 内，先检查目标宿主是否支持并实际完成了子响应 promotion：
+   - 若最终持久 AI 消息已存在非空 `totalQuoteList`，且它与最终文本真实 CITE ID 相交，并能追溯到 `childrenResponses` 中本轮原生 `datasetSearchNode.quoteList`，可以接受该子级授权链。
+   - 若没有上述持久化证据，则主工作流最终作答前需要主工作流内的 `datasetSearchNode` 做引用授权检索：
    - 优先按最终证据的 `collectionId` 拆成多条短任务，不要用一个长 query 同时授权多个 collection。
    - 每条任务只过滤一个 collection：`collectionFilterMatch={ collectionIds:[collectionId] }`。
    - `userChatInput` 使用该 collection 的最终证据短片段 + 来源名 + 用户问题。
-   - 授权检索默认使用 `searchMode=embedding`、`similarity=0`、`usingReRank=false`；它只负责登记 `quoteList/citeCollectionIds`，不改变最终回答用的精选 `quoteQA`。`limit` 先按 20~100 小步校准，只有引用覆盖不足且耗时可控时才提高。
+   - 授权检索默认使用 `searchMode=embedding`、`similarity=0`、`usingReRank=false`；它只负责登记 `quoteList/citeCollectionIds`，不改变最终回答用的精选 `quoteQA`。授权检索的 `limit` 是引用 token 上限，应从目标模型 `quoteMaxToken` 的可用预算校准；不要把 20~100 当作 chunk 数经验值。
    - 如果授权检索耗时超过 10s，优先检查 query 长度、是否误用 `mixedRecall`、是否把多个 collection 合到一次搜索。
 
 ### 6.5 内部节点输出控制
@@ -528,7 +530,7 @@ FastGPT 的引用弹窗和“全部引用/查看全文”不只看最终回答�
 - 默认关闭：analyzer、router、verifier、planner、reranker、工作流工具内部判断节点。
 - 最终 prompt 不应暴露“工具调用、补查、评分、重排、内部策略”等执行机制；这些应保留在 code/tool 输出和 flowResponses 诊断中。
 
-**注意**：这不代表之前没有走知识库；它通常代表“知识库检索发生在工具工作流内部，但原生引用权限没有在主工作流顶层登记”。
+**注意**：这不代表之前没有走知识库；它通常代表“知识库检索发生在工具工作流内部，但宿主尚未把子级原生 quote 投影到持久消息”，或者目标版本不支持该 promotion。不能只凭 `pluginOutput`、工具轨迹或 `childrenResponses` 推断前端已授权。
 
 ```
 1. 加载 JSON 文件
@@ -579,7 +581,7 @@ Project-specific workflow architecture, appIds, dataset registries, and customer
 
 1. **不要凭记忆猜 FastGPT 字段名**。必须对照 §0 的官方合约。
 2. **不要手动格式化大型 JSON**。用 `jq` 或 `JSON.stringify(null, 2)` 处理。
-3. **不要把 limit 当 token 预算**。observed in tested FastGPT instances, main search limit 应按 chunk 数/检索上限治理：quick≈20、standard≈50、deep≈100；4000+ 属于高风险配置。
+3. **不要把 `limit` 当 chunk 数**。FastGPT 4.14.7 的 `datasetSearchNode.limit` 是单次搜索的引用正文 token 上限；按目标模型 `quoteMaxToken`、正文覆盖和耗时校准，候选/路由/chunk 数量另设上限。
 4. **修复代码节点时注意双重转义**。最安全的方法是先写好 JS 代码 → 再用 `JSON.stringify()` 生成 JSON 值。
 5. **修改 JSON 后必须重新校验**。至少执行 `jq .` 确认格式正确。
 
@@ -607,9 +609,9 @@ Project-specific workflow architecture, appIds, dataset registries, and customer
 
 ### 10.3 原生引用授权建议
 
-- 工作流工具内部检索可以提供真实证据，但 FastGPT 原生 CITE 鉴权最好由主工作流顶层 `datasetSearchNode.quoteList` 登记。
+- 工作流工具内部检索可以提供真实证据。对未验证子响应 promotion 的工作流，FastGPT 原生 CITE 鉴权最好由主工作流顶层 `datasetSearchNode.quoteList` 登记；对已验证的 AgentV2 宿主，可接受 `childrenResponses` 原生 quote → 持久 `totalQuoteList` 的投影链，但每次仍需以最终持久消息验收。
 - 引用授权检索只负责登记引用权限，不参与答案排序。
-- 稳定模式：按最终证据 collection 拆成 3-4 个固定槽位，每槽单 collection、短 query、`searchMode=embedding`、`similarity=0`、`usingReRank=false`；`limit` 与主检索分开校准，优先从 20~100 起测，只有引用覆盖不足且耗时可接受时才小幅提高。
+- 稳定模式：按最终证据 collection 拆成 3-4 个固定槽位，每槽单 collection、短 query、`searchMode=embedding`、`similarity=0`、`usingReRank=false`；`limit` 与主检索分开校准，它们都是引用 token 上限而不是 chunk 数，须以目标模型 `quoteMaxToken` 和端到端耗时为约束。
 - 如果授权检索耗时高，先降低槽位数和 query 长度；不要把所有 collection 塞进一个长 mixedRecall 检索。
 
 ### 10.4 metadata / tags / stale import 诊断
